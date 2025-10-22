@@ -1,0 +1,105 @@
+.
+├── .env.local
+├── .gitignore
+├── README.md
+├── RLS_DEV_POLICIES.sql
+├── eslint.config.mjs
+├── next-env.d.ts
+├── next.config.ts
+├── package-lock.json
+├── package.json
+├── postcss.config.mjs
+├── project-tree.txt
+├── public
+│   ├── file.svg
+│   ├── globe.svg
+│   ├── next.svg
+│   ├── vercel.svg
+│   └── window.svg
+├── src
+│   ├── app
+│   │   ├── (app)
+│   │   │   └── home
+│   │   ├── (auth)
+│   │   │   └── login
+│   │   ├── auth
+│   │   │   ├── callback
+│   │   │   └── page.tsx
+│   │   ├── favicon.ico
+│   │   ├── globals.css
+│   │   ├── layout.tsx
+│   │   ├── notes
+│   │   │   └── page.tsx
+│   │   ├── page.tsx
+│   │   ├── settings
+│   │   │   └── page.tsx
+│   │   └── tracker
+│   │       └── page.tsx
+│   ├── components
+│   │   ├── AppShell.tsx
+│   │   ├── TabBar.tsx
+│   │   ├── home
+│   │   │   ├── BreatheModal.tsx
+│   │   │   ├── FabCluster.tsx
+│   │   │   ├── FavoritesStrip.tsx
+│   │   │   ├── FeatureTiles.tsx
+│   │   │   ├── FeedPreview.tsx
+│   │   │   ├── GreetingCard.tsx
+│   │   │   ├── GreetingPulse.tsx
+│   │   │   ├── GreetingToast.tsx
+│   │   │   ├── HabitsToday.tsx
+│   │   │   ├── HeroHeader.tsx
+│   │   │   ├── KpiChips.tsx
+│   │   │   ├── MoodLog.tsx
+│   │   │   ├── MoodSelector.tsx
+│   │   │   ├── ProgramCards.tsx
+│   │   │   ├── ProgressRing.tsx
+│   │   │   ├── ProgressSummary.tsx
+│   │   │   ├── QuickActions.tsx
+│   │   │   ├── TrackerHero.tsx
+│   │   │   ├── WaveDivider.tsx
+│   │   │   └── types.ts
+│   │   ├── providers
+│   │   │   ├── AppProviders.tsx
+│   │   │   └── ThemeProvider.tsx
+│   │   └── ui
+│   │       ├── AuthCard.tsx
+│   │       ├── BottomNav.tsx
+│   │       ├── Button.tsx
+│   │       ├── Card.tsx
+│   │       ├── Chip.tsx
+│   │       ├── Dialog.tsx
+│   │       ├── Fab.tsx
+│   │       ├── GlassCard.tsx
+│   │       ├── GradientHeader.tsx
+│   │       ├── IconButton.tsx
+│   │       ├── Input.tsx
+│   │       ├── ProgressRing.tsx
+│   │       ├── QuickActionPill.tsx
+│   │       ├── Sheet.tsx
+│   │       ├── Skeleton.tsx
+│   │       ├── Tabs.tsx
+│   │       └── Toast.tsx
+│   ├── hooks
+│   │   ├── useDailyMetrics.ts
+│   │   ├── useFeed.ts
+│   │   ├── useSession.ts
+│   │   ├── useTodayFeed.ts
+│   │   └── useTodayHabits.ts
+│   ├── lib
+│   │   ├── exportData.ts
+│   │   ├── metrics.ts
+│   │   ├── motion.ts
+│   │   ├── offlineQueue.ts
+│   │   ├── seed.ts
+│   │   └── supabaseClient.ts
+│   ├── styles
+│   │   └── tokens.css
+│   └── utils
+│       ├── dates.ts
+│       ├── json.ts
+│       ├── logger.ts
+│       └── name.ts
+└── tsconfig.json
+
+21 directories, 82 files
