@@ -1,3 +1,3 @@
-// UNUSED: route not mounted. Real login is at src/app/auth/page.tsx
-
+// UNUSED — Do not mount this route.
+// The real login is at: src/app/auth/page.tsx (/auth)
 export {};

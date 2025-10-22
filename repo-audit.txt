@@ -1,44 +1,23 @@
-
-Summary:
-- Primary cause: shared Button component defaulted to type="button", so legacy login submissions never triggered navigation; normalized to type="submit".
-- Legacy login route now reduced to a no-op stub to avoid conflicting navigation to /home.
-
-
-Details:
-1. Page files under src/app (<=4 levels):
-src/app/(app)/home/page.tsx
-src/app/(auth)/login/page.tsx
-src/app/auth/page.tsx
-src/app/notes/page.tsx
-src/app/page.tsx
+[AUDIT Wed Oct 22 19:59:39 BST 2025]
+\n[useSession refs]
+src/app/settings/page.tsx:5:import { useSession } from "@/hooks/useSession";
+src/app/settings/page.tsx:14:  const { session } = useSession();
+src/components/home/FavoritesStrip.tsx:7:import { useSession } from "@/hooks/useSession";
+src/components/home/FavoritesStrip.tsx:35:  const { session } = useSession();
+src/components/AppShell.tsx:5:import { useSession } from "@/hooks/useSession";
+src/components/AppShell.tsx:9:  const { session, loading } = useSession();
+src/hooks/useTodayHabits.ts:6:import { useSession } from "./useSession";
+src/hooks/useTodayHabits.ts:66:  const { session } = useSession();
+src/hooks/useDailyMetrics.ts:5:import { useSession } from "./useSession";
+src/hooks/useDailyMetrics.ts:19:  const { session } = useSession();
+src/hooks/useSession.ts:7:export function useSession() {
+src/hooks/useTodayFeed.ts:4:import { useSession } from "./useSession";
+src/hooks/useTodayFeed.ts:111:  const { session } = useSession();
+\n[pages]
 src/app/settings/page.tsx
+src/app/(app)/home/page.tsx
+src/app/auth/page.tsx
 src/app/tracker/page.tsx
-
-2. Middleware / redirects:
-- middleware.ts: none
-- next.config.ts redirects: none defined
-
-3. Auth callback folder:
-- src/app/auth/_callback_disabled
-
-4. Button components & exports:
-- src/components/ui/Button.tsx exports both default and named Button (default type now "submit", supports isLoading/loadingText).
-
-5. router.push occurrences (/home, /auth, /auth/callback):
-none
-
-6. Login form wiring:
-- /auth (src/app/auth/page.tsx):
-  onSubmit lines -> 123:          <form className="flex flex-col gap-6 text-left" onSubmit={handleSubmit} noValidate>
-  type="submit" lines -> 180:            <Button type="submit" isLoading={isSubmitting} loadingText="Signing in">
-  raw <button> tags -> none
-- Legacy (src/app/(auth)/login/page.tsx):
-  onSubmit lines -> none
-  type="submit" lines -> none
-  raw <button> tags -> none
-
-
-FIX REPORT:
-- Root cause: Button component defaulted to type="button" and legacy route pushed to /home, leading to inconsistent navigation.
-- Files changed: next.config.ts; src/components/ui/Button.tsx; src/app/auth/page.tsx; src/app/(auth)/login/page.tsx; repo-audit.txt.
-- Fixes: forced Turbopack root in experimental config, normalized Button default type, ensured /auth form pushes to "/" with login-doctor marker, stubbed legacy login route, documented findings.
+src/app/notes/page.tsx
+src/app/(auth)/login/page.tsx
+src/app/page.tsx

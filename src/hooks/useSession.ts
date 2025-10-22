@@ -1,31 +1,41 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
-import { supabase } from "@/lib/supabaseClient";
+
+export type Status = "loading" | "authenticated" | "unauthenticated";
+
+type Session = { user: { id: string } } | null;
 
 export function useSession() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<Status>("loading");
+  const [session, setSession] = useState<Session>(null);
 
   useEffect(() => {
-    let mounted = true;
+    const read = () => {
+      const authed =
+        typeof window !== "undefined" && window.localStorage.getItem("calmscroll_session") === "1";
+      return authed ? "authenticated" : "unauthenticated";
+    };
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session ?? null);
-      setLoading(false);
-    });
+    const statusNow = read();
+    setStatus(statusNow);
+    setSession(statusNow === "authenticated" ? { user: { id: "local" } } : null);
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-    });
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === "calmscroll_session") {
+        const nextStatus = read();
+        setStatus(nextStatus);
+        setSession(nextStatus === "authenticated" ? { user: { id: "local" } } : null);
+      }
+    };
 
+    window.addEventListener("storage", onStorage);
     return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
+      window.removeEventListener("storage", onStorage);
     };
   }, []);
 
-  return { session, loading };
+  return { status, session, loading: status === "loading" };
 }
+
+export default useSession;

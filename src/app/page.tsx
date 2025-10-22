@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion } from "framer-motion";
 import { useState, type CSSProperties } from "react";
+import { useSession } from "@/hooks/useSession";
 import { GradientHeader } from "@/components/ui/GradientHeader";
 import { QuickActionPill } from "@/components/ui/QuickActionPill";
 import { ProgressRing } from "@/components/ui/ProgressRing";
@@ -77,11 +78,18 @@ export default function HomePage() {
   const [isFabOpen, setIsFabOpen] = useState(false);
   const pathname = usePathname();
   const accentStyle = { "--accent": "#5282FF" } as CSSProperties;
+  const { status } = useSession();
 
   const quickActionDetail = activeQuickAction ? quickActionDetails[activeQuickAction] : null;
 
   return (
     <div className="relative min-h-svh overflow-hidden bg-[linear-gradient(140deg,#0B3B64_0%,#5282FF_55%,#FFB3C7_100%)] pb-[calc(env(safe-area-inset-bottom,0px)+140px)]">
+      <div
+        data-auth-debug
+        className="pointer-events-none fixed right-3 top-[64px] z-40 rounded-full bg-black/45 px-3 py-1 text-xs font-semibold text-white"
+      >
+        status: {status}
+      </div>
       <div className="pointer-events-none absolute inset-0 bg-white/12" aria-hidden />
       <div
         className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.35),transparent_65%)]"
