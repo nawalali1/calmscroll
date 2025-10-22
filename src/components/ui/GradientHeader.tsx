@@ -18,27 +18,27 @@ export function GradientHeader({ title, subtitle, children }: GradientHeaderProp
       initial={{ opacity: 0, y: -12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
-      className="relative isolate overflow-hidden bg-[linear-gradient(135deg,#0B3B64_0%,#5282FF_55%,#FFB3C7_100%)] text-white shadow-[0_35px_80px_-35px_rgba(9,52,115,0.6)]"
+      className="relative isolate overflow-hidden bg-[linear-gradient(135deg,#A5C7FF_0%,#D0B8FF_50%,#FFB3D1_100%)] text-slate-900 shadow-[0_35px_80px_-35px_rgba(79,97,150,0.35)] dark:text-white"
     >
-      <div className="pointer-events-none absolute inset-0 opacity-70 mix-blend-screen">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_-10%,rgba(255,255,255,0.4),transparent_55%)]" aria-hidden />
+      <div className="pointer-events-none absolute inset-0 opacity-70">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_-10%,rgba(255,255,255,0.35),transparent_55%)]" aria-hidden />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(255,255,255,0.3),transparent_60%)]" aria-hidden />
       </div>
 
       <div className="relative flex flex-col gap-8 px-6 pb-14 pt-[calc(env(safe-area-inset-top,0px)+1.6rem)] sm:px-8">
         <div className="flex items-center justify-between gap-4">
           <div className="space-y-1.5">
-            <p className="text-sm font-medium uppercase tracking-[0.32em] text-white/65">CalmScroll</p>
-            <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
-            {subtitle ? <p className="max-w-sm text-sm text-white/75">{subtitle}</p> : null}
+            <p className="text-sm font-medium uppercase tracking-[0.32em] text-slate-600 dark:text-white/70">CalmScroll</p>
+            <h1 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">{title}</h1>
+            {subtitle ? <p className="max-w-sm text-sm text-slate-700/80 dark:text-white/80">{subtitle}</p> : null}
           </div>
 
           <Link
             href="/settings"
             aria-label="Open settings"
             className={cn(
-              "relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/35 bg-white/15 text-white transition",
-              "hover:bg-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              "relative inline-flex h-12 w-12 items-center justify-center rounded-full border border-white/60 bg-white/40 text-slate-700 shadow transition dark:border-white/20 dark:bg-white/15 dark:text-white",
+              "hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4C6EF5]"
             )}
           >
             <Settings2 className="h-5 w-5" aria-hidden />
@@ -48,7 +48,7 @@ export function GradientHeader({ title, subtitle, children }: GradientHeaderProp
         {children ? <div className="flex items-start gap-6">{children}</div> : null}
       </div>
 
-      <div className="absolute bottom-0 left-0 w-full overflow-hidden text-white/30" aria-hidden>
+      <div className="absolute bottom-0 left-0 w-full overflow-hidden text-white/50 dark:text-white/20" aria-hidden>
         <svg viewBox="0 0 1440 90" className="h-12 w-full">
           <path
             fill="currentColor"

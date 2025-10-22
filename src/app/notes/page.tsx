@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { Search, MoreVertical, Star } from "lucide-react";
 import GlassyCard from "@/components/GlassyCard";
 import IconButton from "@/components/IconButton";
+import BottomSheet from "@/components/BottomSheet";
+import BottomNav from "@/components/ui/BottomNav";
 
 type Kind = "checkin" | "prompt" | "free";
 type Reflection = {
@@ -40,6 +42,21 @@ function persist(list: Reflection[]) {
   window.localStorage.setItem(LS_KEY, JSON.stringify(list));
 }
 
+function formatTimestamp(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  const now = new Date();
+  const sameDay =
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate();
+  const dayLabel = sameDay
+    ? "Today"
+    : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const timeLabel = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  return `${dayLabel}, ${timeLabel}`;
+}
+
 export default function ReflectionsPage() {
   const router = useRouter();
   const [items, setItems] = useState<Reflection[]>([]);
@@ -51,24 +68,21 @@ export default function ReflectionsPage() {
   const [body, setBody] = useState("");
   const [error, setError] = useState("");
   const [mounted, setMounted] = useState(false);
-
-  const prefersReducedMotion =
-    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
     const data = load().sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt));
     setItems(data);
     setIsLoading(false);
     setMounted(true);
+    if (typeof window !== "undefined") {
+      const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const update = () => setPrefersReducedMotion(media.matches);
+      update();
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    }
   }, []);
-
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.body.style.overflow = composerOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [composerOpen]);
 
   const filtered = useMemo(() => {
     const base = filter === "all" ? items : items.filter((item) => item.kind === filter);
@@ -134,55 +148,56 @@ export default function ReflectionsPage() {
   };
 
   return (
-    <main
-      data-version="notes-list-v2"
-      className="min-h-screen bg-calm-gradient text-slate-900 transition-colors dark:text-white"
-    >
-      <header
-        className={`bg-calm-gradient px-5 pt-12 pb-6 shadow-[0_25px_60px_-35px_rgba(15,23,42,0.45)] ${
-          prefersReducedMotion ? "" : "transition-all duration-500"
-        }`}
-      >
-        <h1 className="text-2xl font-semibold tracking-tight">My Reflections</h1>
-        <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-          Capture daily check-ins, guided prompts, or free-form thoughts.
-        </p>
+    <div className="flex min-h-screen items-center justify-center bg-calm-gradient py-12">
+      <div className="page-shell">
+        <div className="screen" data-version="notes-list-v2">
+          <header
+            className={`bg-calm-gradient px-6 pt-16 pb-10 text-slate-900 shadow-[0_25px_60px_-35px_rgba(15,23,42,0.45)] transition-colors dark:text-white ${
+              prefersReducedMotion ? "" : "transition-all duration-500"
+            }`}
+          >
+            <p className="text-sm uppercase tracking-[0.3em] text-slate-600 dark:text-slate-300">Notes</p>
+            <h1 className="mt-2 text-3xl font-semibold tracking-tight">My Reflections</h1>
+            <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
+              Capture daily check-ins, guided prompts, or free-form thoughts.
+            </p>
 
-        <div className="relative mt-4">
-          <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
-          <input
-            value={query}
-            onChange={(event) => setQuery(event.currentTarget.value)}
-            placeholder="Search reflections."
-            className="w-full rounded-full border border-white/60 bg-white/90 px-11 py-3 text-sm text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:border-white/20 dark:bg-white/10 dark:text-white"
-          />
-        </div>
+            <div className="relative mt-4">
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.currentTarget.value)}
+                placeholder="Search reflections."
+                className="w-full rounded-full border border-white/60 bg-white/90 px-11 py-3 text-sm text-slate-900 shadow-inner focus:outline-none focus:ring-2 focus:ring-indigo-400 dark:border-white/20 dark:bg-white/10 dark:text-white"
+              />
+            </div>
 
-        <div className="mt-4 flex gap-2 text-sm">
-          {(["all", "checkin", "prompt", "free"] as const).map((key) => {
-            const isActive = filter === key;
-            return (
-              <button
-                key={key}
-                onClick={() => setFilter(key)}
-                className={`rounded-full px-3 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
-                  isActive
-                    ? "bg-white text-[#0B3B64] shadow"
-                    : "border border-white/50 text-white/90 hover:bg-white/20 dark:border-white/20"
-                }`}
-              >
-                {key === "all" ? "All" : KIND_LABELS[key]}
-              </button>
-            );
-          })}
-        </div>
-      </header>
+            <div className="mt-4 flex gap-2 text-sm">
+              {(["all", "checkin", "prompt", "free"] as const).map((key) => {
+                const isActive = filter === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setFilter(key)}
+                    className={`rounded-full px-3 py-1 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white ${
+                      isActive
+                        ? "bg-white text-[#0B3B64] shadow"
+                        : "border border-white/50 text-white/90 hover:bg-white/20 dark:border-white/20"
+                    }`}
+                  >
+                    {key === "all" ? "All" : KIND_LABELS[key]}
+                  </button>
+                );
+              })}
+            </div>
+          </header>
 
-      <section className="px-5 py-6">
+          <section className="px-6 py-6">
         {isLoading ? (
           <div className="space-y-3">
             {Array.from({ length: 4 }).map((_, index) => (
-              <GlassyCard key={index} className="animate-pulse bg-white/40 dark:bg-white/10">
+              <GlassyCard key={index} className="animate-pulse">
                 <div className="space-y-3 p-4">
                   <div className="h-4 w-1/3 rounded-full bg-white/60 dark:bg-white/20" />
                   <div className="h-3 w-full rounded-full bg-white/50 dark:bg-white/15" />
@@ -224,7 +239,7 @@ export default function ReflectionsPage() {
                       handleCardActivate(item.id);
                     }
                   }}
-                  className={`group relative cursor-pointer bg-white/75 p-4 text-left dark:bg-white/10 ${initialClass} ${animationClass}`}
+                  className={`group relative cursor-pointer p-4 text-left ${initialClass} ${animationClass}`}
                   style={{ transitionDelay: prefersReducedMotion ? undefined : `${index * 20}ms` }}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -241,11 +256,7 @@ export default function ReflectionsPage() {
                         {item.body || "—"}
                       </p>
                       <p className="mt-3 text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                        {new Date(item.updatedAt || item.createdAt).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
+                        {formatTimestamp(item.updatedAt || item.createdAt)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2 opacity-0 transition group-hover:opacity-100 group-focus-within:opacity-100">
@@ -276,68 +287,65 @@ export default function ReflectionsPage() {
         )}
       </section>
 
-      {composerOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-4 pb-6">
-          <div className="w-full max-w-md rounded-t-3xl bg-white p-6 text-slate-900 shadow-2xl dark:bg-neutral-900 dark:text-white">
-            <h2 className="text-lg font-semibold">New reflection</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              Give this reflection a title and jot down what&apos;s on your mind.
-            </p>
+      <BottomSheet
+        open={composerOpen}
+        onClose={() => handleComposerToggle(false)}
+        title="New reflection"
+        description="Give this reflection a title and jot down what’s on your mind."
+      >
+        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+          Title
+          <input
+            value={title}
+            onChange={(event) => {
+              setTitle(event.currentTarget.value);
+              if (error) setError("");
+            }}
+            placeholder="Today I noticed..."
+            className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-base text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
+          />
+          {error && <p className="mt-1 text-xs font-medium text-rose-500">{error}</p>}
+        </label>
 
-            <div className="mt-4 space-y-4">
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Title
-                <input
-                  value={title}
-                  onChange={(event) => {
-                    setTitle(event.currentTarget.value);
-                    if (error) setError("");
-                  }}
-                  placeholder="Today I noticed..."
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-base text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
-                />
-                {error && <p className="mt-1 text-xs font-medium text-rose-500">{error}</p>}
-              </label>
+        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+          Body
+          <textarea
+            value={body}
+            onChange={handleTextareaInput}
+            placeholder="Let your thoughts flow..."
+            rows={4}
+            className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-base text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
+          />
+        </label>
 
-              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-                Body
-                <textarea
-                  value={body}
-                  onChange={handleTextareaInput}
-                  placeholder="Let your thoughts flow..."
-                  rows={4}
-                  className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-base text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
-                />
-              </label>
-            </div>
-
-            <div className="mt-6 flex items-center justify-end gap-3">
-              <button
-                onClick={() => handleComposerToggle(false)}
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400 dark:border-white/20 dark:text-slate-200 dark:hover:bg-white/10"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSave}
-                className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400 dark:bg-indigo-500"
-              >
-                Save
-              </button>
-            </div>
-          </div>
+        <div className="flex items-center justify-end gap-3 pt-2">
+          <button
+            onClick={() => handleComposerToggle(false)}
+            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400 dark:border-white/20 dark:text-slate-200 dark:hover:bg-white/10"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSave}
+            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400 dark:bg-indigo-500"
+          >
+            Save
+          </button>
         </div>
-      )}
+      </BottomSheet>
 
       {!composerOpen && (
         <button
           onClick={() => handleComposerToggle(true)}
-          className="fixed bottom-24 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-slate-900 text-3xl font-bold text-white shadow-lg transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white dark:bg-indigo-500"
+          className="fixed bottom-24 right-5 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 via-sky-500 to-pink-500 text-3xl font-bold text-white shadow-lg transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           aria-label="Add reflection"
         >
           +
         </button>
       )}
-    </main>
+      <BottomNav />
+        </div>
+      </div>
+    </div>
   );
 }
