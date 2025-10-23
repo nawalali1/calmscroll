@@ -31,7 +31,6 @@ const log = (level: LogLevel, message: string, payload?: Record<string, unknown>
   if (!isDev && level === "debug") return;
   const timestamp = new Date().toISOString();
   const normalized = normalizePayload(payload);
-  // eslint-disable-next-line no-console
   console[level === "debug" ? "log" : level](`[CalmScroll][${timestamp}] ${message}`, normalized ?? "");
 };
 

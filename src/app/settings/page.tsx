@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import GlassyCard from "@/components/GlassyCard";
 import BottomSheet from "@/components/BottomSheet";
-import BottomNav from "@/components/ui/BottomNav";
+import BottomNav from "@/components/BottomNav";
 
 const PROFILE_KEY = "calmscroll_profile";
 const THEME_KEY = "calmscroll_theme";
@@ -127,7 +127,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-calm-gradient py-12">
+    <>
       <div className="page-shell">
         <div className="screen">
           <header className="bg-calm-gradient px-6 pt-16 pb-10 text-slate-900 dark:text-white">
@@ -284,7 +284,6 @@ export default function SettingsPage() {
               </footer>
             </div>
           </main>
-
           <BottomNav />
         </div>
       </div>
@@ -336,6 +335,6 @@ export default function SettingsPage() {
           </button>
         </div>
       </BottomSheet>
-    </div>
+    </>
   );
 }

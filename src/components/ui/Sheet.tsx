@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 
@@ -12,12 +12,12 @@ type SheetProps = {
   children: ReactNode;
 };
 
-const sheetVariants = {
+const sheetVariants: Variants = {
   hidden: { y: "100%", opacity: 0 },
   visible: {
     y: 0,
     opacity: 1,
-    transition: { duration: 0.25, ease: [0.21, 0.72, 0.42, 1] },
+    transition: { duration: 0.25, ease: [0.21, 0.72, 0.42, 1] as [number, number, number, number] },
   },
   exit: { y: "100%", opacity: 0, transition: { duration: 0.2 } },
 };

@@ -37,19 +37,19 @@ body {
 
 @layer utilities {
   .bg-calm-gradient {
-    @apply bg-gradient-to-br from-[#A5C7FF] via-[#D0B8FF] to-[#FFB3D1] dark:from-[#1e1f3a] dark:via-[#161729] dark:to-[#1d1231];
+    @apply bg-gradient-to-br from-sky-200 via-indigo-200 to-pink-200 dark:from-slate-900 dark:via-slate-950 dark:to-indigo-950;
   }
 
   .glass {
-    @apply rounded-2xl border border-white/40 bg-[rgba(255,255,255,0.6)] shadow-[0_6px_24px_rgba(0,0,0,0.1)] backdrop-blur-[12px] dark:border-white/10 dark:bg-[rgba(20,20,20,0.55)];
+    @apply rounded-2xl backdrop-blur-md bg-white/70 dark:bg-neutral-900/55 border border-white/40 dark:border-white/10 shadow-[0_6px_30px_rgba(0,0,0,0.08)];
   }
 
   .page-shell {
-    @apply relative h-[932px] w-full max-w-[430px] overflow-hidden rounded-[40px] shadow-[0_40px_80px_-30px_rgba(15,23,42,0.4)];
+    @apply relative mx-auto w-full max-w-[430px] min-h-[100dvh] bg-white dark:bg-black;
   }
 
   .screen {
-    @apply absolute inset-0 flex flex-col bg-gray-50 dark:bg-neutral-950;
+    @apply flex min-h-[100dvh] flex-col bg-gray-50 dark:bg-neutral-950;
   }
 
   .container-px {

@@ -1,6 +1,6 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 
@@ -15,12 +15,12 @@ type DialogProps = {
   onConfirm?: () => void;
 };
 
-const dialogVariants = {
+const dialogVariants: Variants = {
   hidden: { y: 12, opacity: 0 },
   visible: {
     y: 0,
     opacity: 1,
-    transition: { duration: 0.25, ease: [0.21, 0.72, 0.42, 1] },
+    transition: { duration: 0.25, ease: [0.21, 0.72, 0.42, 1] as [number, number, number, number] },
   },
   exit: { y: 8, opacity: 0, transition: { duration: 0.2 } },
 };

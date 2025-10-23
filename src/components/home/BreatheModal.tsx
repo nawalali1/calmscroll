@@ -111,16 +111,18 @@ export function BreatheModal({ open, onClose }: BreatheModalProps) {
         <div className="flex w-full flex-col gap-2 sm:flex-row">
           <Button
             type="button"
-            variant={isRunning ? "ghost" : "primary"}
-            className="flex-1"
+            className={`flex-1 transition ${
+              isRunning
+                ? "border border-[var(--accent)] bg-transparent text-[var(--accent)] hover:bg-[var(--accent)]/10"
+                : "bg-[var(--accent)] text-white hover:brightness-110"
+            }`}
             onClick={() => setIsRunning((prev) => !prev)}
           >
             {isRunning ? "Pause" : elapsed > 0 ? "Resume" : "Start"}
           </Button>
           <Button
             type="button"
-            variant="subtle"
-            className="flex-1"
+            className="flex-1 border border-[var(--accent)]/20 bg-white/80 text-[var(--accent-ink)] hover:bg-white"
             onClick={() => {
               setIsRunning(false);
               onClose();

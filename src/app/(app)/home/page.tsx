@@ -20,7 +20,7 @@ import ProgressRing from "@/components/ui/ProgressRing";
 import QuickActionPill from "@/components/ui/QuickActionPill";
 import GlassCard from "@/components/ui/GlassCard";
 import Fab from "@/components/ui/Fab";
-import BottomNav from "@/components/ui/BottomNav";
+import BottomNav from "@/components/BottomNav";
 import Button from "@/components/ui/Button";
 
 type QuickAction = {

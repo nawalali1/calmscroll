@@ -1,211 +1,231 @@
 "use client";
 
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Sunrise, MoonStar, Focus, RefreshCcw, Sparkles, Info } from "lucide-react";
-import { GradientHeader } from "@/components/ui/GradientHeader";
+import { NotebookPen, Sparkles, StretchVertical, Wind } from "lucide-react";
 import { QuickActionPill } from "@/components/ui/QuickActionPill";
-import { ProgressRing } from "@/components/ui/ProgressRing";
 import GlassyCard from "@/components/GlassyCard";
-import IconButton from "@/components/IconButton";
 import { Button } from "@/components/ui/Button";
 import { Fab } from "@/components/ui/Fab";
 import BottomSheet from "@/components/BottomSheet";
-import BottomNav from "@/components/ui/BottomNav";
+import BottomNav from "@/components/BottomNav";
 
-const REFLECTIONS_KEY = "calmscroll_reflections";
+type QuickActionId = "breathe" | "reflect" | "stretch";
 
-type QuickActionId = "morning" | "evening" | "focus" | "reset";
-
-type QuickActionDetail = {
+type QuickAction = {
+  id: QuickActionId;
   label: string;
   description: string;
   prompt: string;
   actionLabel: string;
-  icon: JSX.Element;
+  icon: ReactNode;
 };
 
-const quickActionDetails: Record<QuickActionId, QuickActionDetail> = {
-  morning: {
-    label: "Morning Calm",
-    description: "Set your anchor before the scroll begins.",
-    prompt: "Take three breaths. What feeling do you want to keep today?",
-    actionLabel: "Begin Reflection",
-    icon: <Sunrise className="h-4 w-4" aria-hidden />,
+const QUICK_ACTIONS: QuickAction[] = [
+  {
+    id: "breathe",
+    label: "Breathe",
+    description: "Reset your mind with a guided breathing session.",
+    prompt: "Inhale slowly for four counts, exhale for six. What shifts for you after three rounds?",
+    actionLabel: "Begin Breathing",
+    icon: <Wind className="h-5 w-5" aria-hidden />,
   },
-  evening: {
-    label: "Evening Wind Down",
-    description: "Ease into a softer rhythm.",
-    prompt: "Name one thing you’re releasing tonight and why.",
-    actionLabel: "Start Wind Down",
-    icon: <MoonStar className="h-4 w-4" aria-hidden />,
+  {
+    id: "reflect",
+    label: "Reflect",
+    description: "Take a moment to check in with yourself.",
+    prompt: "Name one feeling you want to carry forward and one you can release.",
+    actionLabel: "Start Reflection",
+    icon: <NotebookPen className="h-5 w-5" aria-hidden />,
   },
-  focus: {
-    label: "Focus Flow",
-    description: "Dial into a single task with intent.",
-    prompt: "What deserves your full attention for the next 20 minutes?",
-    actionLabel: "Enter Focus Flow",
-    icon: <Focus className="h-4 w-4" aria-hidden />,
+  {
+    id: "stretch",
+    label: "Stretch",
+    description: "Release tension with gentle movement prompts.",
+    prompt: "Roll your shoulders back and stretch tall. Where do you notice space opening?",
+    actionLabel: "Start Stretch",
+    icon: <StretchVertical className="h-5 w-5" aria-hidden />,
   },
-  reset: {
-    label: "Quick Reset",
-    description: "Shake off the scroll and reset your posture.",
-    prompt: "Stand tall, stretch overhead, and list two sensations you notice.",
-    actionLabel: "Quick Reset",
-    icon: <RefreshCcw className="h-4 w-4" aria-hidden />,
-  },
-};
+];
 
-const focusCards = [
+const FOCUS_CARDS = [
   {
     id: "focus-breathe",
     title: "1-Minute Breathe",
-    description: "Follow a calming cadence to steady your breath.",
+    description: "Reset your mind with a guided breathing session.",
+    accent: "from-[#86B7FF] to-[#B39CFF]",
+    icon: Wind,
   },
   {
     id: "focus-reflection",
     title: "Guided Reflection",
-    description: "Note one win and one insight from today.",
+    description: "Take a moment to check in with yourself.",
+    accent: "from-[#BF9FFF] to-[#FF9ACB]",
+    icon: NotebookPen,
   },
   {
     id: "focus-stretch",
     title: "Stretch Break",
-    description: "Ease upper-body tension in under two minutes.",
+    description: "Release tension with gentle movement prompts.",
+    accent: "from-[#8DD2FF] to-[#A78BFA]",
+    icon: StretchVertical,
   },
 ] as const;
 
-const favorites = ["Morning Journal", "Gratitude List", "Calm Playlist", "Reset Breath", "Mini Stretch"] as const;
+const FAVORITES = ["Morning Journal", "Gratitude List", "Calm Playlist", "Reset Breath", "Mini Stretch"] as const;
 
 export default function HomePage() {
   const router = useRouter();
-  const [activeAction, setActiveAction] = useState<QuickActionId | null>(null);
+  const [activeAction, setActiveAction] = useState<QuickAction | null>(null);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [lastReflection, setLastReflection] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    try {
-      const stored = window.localStorage.getItem(REFLECTIONS_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as { body: string; createdAt: string; updatedAt?: string }[];
-        if (parsed.length > 0) {
-          const [latest] = [...parsed].sort((a, b) => (b.updatedAt || b.createdAt).localeCompare(a.updatedAt || a.createdAt));
-          setLastReflection(latest.body);
-        }
-      }
-    } catch {
-      // ignore
-    }
-
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setPrefersReducedMotion(media.matches);
-    update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
+    const handleChange = () => setPrefersReducedMotion(media.matches);
+    handleChange();
+    media.addEventListener("change", handleChange);
+    return () => media.removeEventListener("change", handleChange);
   }, []);
 
-  const accentStyle = useMemo(() => ({ "--accent": "#4C6EF5" } as CSSProperties), []);
+  const greeting = useMemo(() => {
+    const hour = new Date().getHours();
+    if (hour >= 5 && hour < 12) return "Good Morning";
+    if (hour >= 12 && hour < 18) return "Good Afternoon";
+    return "Good Evening";
+  }, []);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-calm-gradient py-12">
+    <>
       <div className="page-shell">
-        <div className="screen">
-          <GradientHeader
-            title="A calmer scroll starts here."
-            subtitle="Choose a micro-practice to stay present today."
-          />
+        <div className="screen bg-[#F6F8FC] text-slate-900">
+          <header className="relative overflow-hidden rounded-b-[42px] bg-[linear-gradient(145deg,#103A8A_0%,#3F6BFF_55%,#FF8CC4_100%)] px-6 pb-20 pt-[calc(env(safe-area-inset-top,0px)+2.25rem)] text-white shadow-[0_30px_80px_-30px_rgba(30,64,160,0.55)]">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-sm uppercase tracking-[0.3em] text-white/75">{greeting}</p>
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight">Nawal</h1>
+              </div>
+              <div className="relative flex h-20 w-20 items-center justify-center">
+                <div className="absolute inset-0 rounded-full border border-white/30 bg-white/10 backdrop-blur-md" aria-hidden />
+                <svg viewBox="0 0 120 120" className="h-16 w-16 rotate-[-90deg]">
+                  <defs>
+                    <linearGradient id="progress-arc" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#7FC9FF" />
+                      <stop offset="100%" stopColor="#FF9ACB" />
+                    </linearGradient>
+                  </defs>
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="50"
+                    stroke="rgba(255,255,255,0.25)"
+                    strokeWidth="8"
+                    fill="none"
+                  />
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="50"
+                    stroke="url(#progress-arc)"
+                    strokeWidth="8"
+                    strokeLinecap="round"
+                    strokeDasharray={Math.PI * 100}
+                    strokeDashoffset={Math.PI * 100 * 0.22}
+                    fill="none"
+                    className={prefersReducedMotion ? "" : "transition-all duration-700 ease-out"}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                  <span className="text-xl font-semibold leading-none">78%</span>
+                  <span className="mt-1 text-[10px] uppercase tracking-[0.35em] text-white/70">Daily</span>
+                </div>
+              </div>
+            </div>
 
-          <main className="flex-1 space-y-6 px-4 pb-32 pt-6">
-            <section aria-label="Quick actions">
-              <div className="rounded-[2rem] border border-white/40 bg-white/65 p-5 backdrop-blur-[12px] shadow-[0_20px_50px_-35px_rgba(76,110,245,0.35)] dark:border-white/10 dark:bg-[rgba(20,20,20,0.55)]">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Quick Actions</h2>
-                  <span className="text-xs uppercase tracking-[0.3em] text-slate-600 dark:text-slate-300">1 min each</span>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              {QUICK_ACTIONS.map((action) => (
+                <QuickActionPill
+                  key={action.id}
+                  icon={action.icon}
+                  label={action.label}
+                  onClick={() => setActiveAction(action)}
+                  className="flex-1 min-w-[120px] border-white/30 bg-white/15 text-sm font-semibold tracking-tight text-white/95"
+                />
+              ))}
+            </div>
+
+            <div className="pointer-events-none absolute inset-x-0 bottom-[-1px]" aria-hidden>
+              <svg viewBox="0 0 375 60" xmlns="http://www.w3.org/2000/svg" className="h-12 w-full text-white/65">
+                <path
+                  fill="currentColor"
+                  d="M0 40c30 12 90 32 150 28s120-36 180-40 96 20 96 20v32H0V40z"
+                />
+              </svg>
+            </div>
+          </header>
+
+          <main className="flex-1 space-y-6 px-6 pb-[140px] pt-16">
+            <section aria-labelledby="focus-section" className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 id="focus-section" className="text-lg font-semibold text-slate-800">
+                    Today&apos;s Focus
+                  </h2>
+                  <p className="text-sm text-slate-500">Take a moment to check in.</p>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                  {Object.keys(quickActionDetails).map((key) => {
-                    const id = key as QuickActionId;
-                    const detail = quickActionDetails[id];
-                    return (
-                      <QuickActionPill
-                        key={id}
-                        icon={detail.icon}
-                        label={detail.label}
-                        onClick={() => setActiveAction(id)}
-                        className="flex-1 min-w-[140px] !text-slate-900 dark:!text-white"
-                      />
-                    );
-                  })}
-                </div>
+                <Sparkles className="h-5 w-5 text-[#8CA8FF]" aria-hidden />
+              </div>
+
+              <div className="space-y-3">
+                {FOCUS_CARDS.map((card, index) => {
+                  const Icon = card.icon;
+                  return (
+                    <GlassyCard
+                      key={card.id}
+                      className="flex items-center justify-between gap-4 rounded-[24px] border-white/80 bg-white p-4 shadow-[0_25px_80px_-45px_rgba(30,64,160,0.55)]"
+                      style={{ transitionDelay: prefersReducedMotion ? undefined : `${index * 40}ms` }}
+                    >
+                      <div className="flex flex-1 items-center gap-4 text-left">
+                        <span
+                          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-[0_10px_25px_-12px_rgba(15,23,42,0.6)] ${card.accent}`}
+                          aria-hidden
+                        >
+                          <Icon className="h-6 w-6" />
+                        </span>
+                        <div className="space-y-1">
+                          <h3 className="text-base font-semibold text-slate-900">{card.title}</h3>
+                          <p className="text-sm text-slate-500">{card.description}</p>
+                        </div>
+                      </div>
+                      <Button
+                        type="button"
+                        className="rounded-full bg-gradient-to-br from-[#7EA7FF] to-[#FF8DC5] px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-sm hover:brightness-110"
+                      >
+                        Start
+                      </Button>
+                    </GlassyCard>
+                  );
+                })}
               </div>
             </section>
 
-            <section aria-label="Today’s Focus" className="space-y-3">
-              {focusCards.map((card, index) => (
-                <GlassyCard
-                  key={card.id}
-                  className={`flex flex-col gap-4 border border-white/40 bg-white/70 p-5 text-slate-900 shadow-[0_18px_45px_-30px_rgba(76,110,245,0.35)] transition dark:border-white/10 dark:bg-[rgba(20,20,20,0.55)] dark:text-white ${
-                    prefersReducedMotion ? "" : "opacity-100"
-                  }`}
-                  style={{ transitionDelay: prefersReducedMotion ? undefined : `${index * 30}ms` }}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                      <h3 className="text-base font-semibold">{card.title}</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-300">{card.description}</p>
-                    </div>
-                    <Sparkles className="mt-1 h-5 w-5 text-indigo-400 dark:text-indigo-300" aria-hidden />
-                  </div>
-                  <Button
-                    type="button"
-                    style={accentStyle}
-                    className="self-start rounded-full px-5 py-2 text-xs uppercase tracking-[0.25em]"
-                  >
-                    Start
-                  </Button>
-                </GlassyCard>
-              ))}
-              <GlassyCard className="flex items-start justify-between gap-4 border border-white/40 bg-white/70 p-5 text-slate-900 shadow-[0_18px_45px_-30px_rgba(76,110,245,0.35)] dark:border-white/10 dark:bg-[rgba(20,20,20,0.55)] dark:text-white">
-                <div className="space-y-2">
-                  <p className="text-xs uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">Last Reflection</p>
-                  <h3 className="text-lg font-semibold">
-                    {lastReflection ? "Most recent note" : "No reflections yet"}
-                  </h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2">
-                    {lastReflection || "Tap the plus to add your first calm reflection."}
-                  </p>
-                </div>
-                <IconButton
-                  aria-label="Open reflections"
-                  icon={Info}
-                  onClick={() => router.push("/notes")}
-                  className="bg-white/80 text-indigo-500 hover:bg-white dark:bg-white/10 dark:text-indigo-300"
-                />
-              </GlassyCard>
-            </section>
-
-            <section aria-label="Progress">
-              <GlassyCard className="flex flex-col items-center gap-6 border border-white/40 bg-white/60 p-6 text-center text-slate-900 shadow-[0_20px_50px_-35px_rgba(76,110,245,0.35)] dark:border-white/10 dark:bg-[rgba(20,20,20,0.55)] dark:text-white">
-                <ProgressRing value={72} label="Today" />
-                <p className="text-sm text-slate-600 dark:text-slate-300">
-                  Your mindful momentum is steady. Celebrate each micro-step.
-                </p>
-              </GlassyCard>
-            </section>
-
-            <section aria-label="Favorites" className="space-y-2">
-              <h2 className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500 dark:text-slate-300">
-                Favorites
-              </h2>
-              <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 scrollbar-none">
-                {favorites.map((item) => (
+            <section aria-labelledby="favorites-section" className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h2 id="favorites-section" className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
+                  Favorites
+                </h2>
+                <span className="text-xs font-medium uppercase tracking-[0.3em] text-slate-400">Always here</span>
+              </div>
+              <div className="-mx-2 flex gap-3 overflow-x-auto px-2 pb-1 scrollbar-none">
+                {FAVORITES.map((item) => (
                   <button
                     key={item}
                     type="button"
-                    className="min-h-[44px] shrink-0 rounded-full border border-white/40 bg-white/70 px-4 text-sm font-semibold text-slate-900 shadow-[0_18px_35px_-25px_rgba(76,110,245,0.3)] backdrop-blur-md transition hover:bg-white/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4C6EF5] dark:border-white/10 dark:bg-[rgba(20,20,20,0.55)] dark:text-white dark:hover:bg-white/10"
+                    className="inline-flex min-w-[9rem] items-center justify-between gap-3 rounded-full bg-white px-5 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 shadow-[0_18px_45px_-40px_rgba(30,64,160,0.55)] transition hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7EA7FF]"
                   >
                     {item}
+                    <span className="h-2 w-2 rounded-full bg-gradient-to-br from-[#7EA7FF] to-[#FF8DC5]" aria-hidden />
                   </button>
                 ))}
               </div>
@@ -214,7 +234,7 @@ export default function HomePage() {
 
           <Fab
             onClick={() => setCreateSheetOpen(true)}
-            className="absolute left-1/2 bottom-[calc(env(safe-area-inset-bottom,16px)+104px)] -translate-x-1/2 bg-gradient-to-br from-[#A5C7FF] via-[#D0B8FF] to-[#FFB3D1]"
+            className="absolute left-1/2 bottom-[calc(env(safe-area-inset-bottom,0px)+108px)] -translate-x-1/2 bg-gradient-to-br from-[#85B6FF] via-[#B99BFF] to-[#FF8FC6] shadow-[0_25px_45px_-25px_rgba(255,142,200,0.6)]"
           />
 
           <BottomNav />
@@ -224,16 +244,14 @@ export default function HomePage() {
       <BottomSheet
         open={Boolean(activeAction)}
         onClose={() => setActiveAction(null)}
-        title={activeAction ? quickActionDetails[activeAction].label : undefined}
-        description={activeAction ? quickActionDetails[activeAction].description : undefined}
+        title={activeAction?.label}
+        description={activeAction?.description}
       >
         {activeAction ? (
           <>
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              {quickActionDetails[activeAction].prompt}
-            </p>
-            <Button type="button" onClick={() => setActiveAction(null)} className="w-full rounded-full">
-              {quickActionDetails[activeAction].actionLabel}
+            <p className="text-sm text-slate-600">{activeAction.prompt}</p>
+            <Button type="button" onClick={() => setActiveAction(null)} className="w-full rounded-full bg-slate-900 text-white">
+              {activeAction.actionLabel}
             </Button>
           </>
         ) : null}
@@ -247,25 +265,25 @@ export default function HomePage() {
         <Button
           type="button"
           onClick={() => router.push("/notes/new?kind=free")}
-          className="w-full rounded-full"
+          className="w-full rounded-full bg-slate-900 text-white"
         >
           Free Reflection
         </Button>
         <Button
           type="button"
           onClick={() => router.push("/notes/new?kind=prompt")}
-          className="w-full rounded-full"
+          className="w-full rounded-full bg-slate-900 text-white"
         >
           Choose a Prompt
         </Button>
         <Button
           type="button"
           onClick={() => router.push("/notes/new?kind=checkin")}
-          className="w-full rounded-full"
+          className="w-full rounded-full bg-slate-900 text-white"
         >
           Check-in
         </Button>
       </BottomSheet>
-    </div>
+    </>
   );
 }

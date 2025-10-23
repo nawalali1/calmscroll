@@ -5,7 +5,6 @@ import cn from "classnames";
 
 type TabsRootProps = {
   value: string;
-  onValueChange: (value: string) => void;
   children: ReactNode;
   className?: string;
 };
@@ -30,7 +29,7 @@ type TabsContentProps = {
   className?: string;
 };
 
-export function TabsRoot({ value, onValueChange, children, className }: TabsRootProps) {
+export function TabsRoot({ value, children, className }: TabsRootProps) {
   return (
     <div className={cn("flex flex-col gap-4", className)} data-value={value}>
       {children}

@@ -47,7 +47,7 @@ export function FeedPreview({ items, isLoading, onToggleFavorite, onMarkRead, on
         toast.notify({ title: "Copied to clipboard" });
       }
       logEvent("card_share", { id: item.id });
-    } catch (error) {
+    } catch {
       toast.notify({ title: "Share cancelled" });
     }
   };
@@ -56,7 +56,7 @@ export function FeedPreview({ items, isLoading, onToggleFavorite, onMarkRead, on
     try {
       await onMarkRead(item.id, item.kind);
       toast.notify({ title: "Marked as read" });
-    } catch (error) {
+    } catch {
       toast.notify({ title: "Unable to mark as read", status: "error" });
     }
   };
@@ -143,7 +143,7 @@ export function FeedPreview({ items, isLoading, onToggleFavorite, onMarkRead, on
                         toast.notify({
                           title: item.isFavorite ? "Removed from favorites" : "Saved to favorites",
                         });
-                      } catch (error) {
+                      } catch {
                         toast.notify({ title: "Couldn’t update favorite", status: "error" });
                       }
                     }}
@@ -164,9 +164,7 @@ export function FeedPreview({ items, isLoading, onToggleFavorite, onMarkRead, on
                   />
                   <Button
                     type="button"
-                    size="sm"
-                    variant="primary"
-                    className="gap-2"
+                    className="gap-2 bg-[var(--accent)] px-4 py-2 text-sm text-white hover:brightness-110"
                     onClick={() => handleMarkRead(item)}
                   >
                     <CheckCircle2 className="h-4 w-4" aria-hidden />

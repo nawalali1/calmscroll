@@ -1,11 +1,11 @@
 "use client";
 
-import { forwardRef, ButtonHTMLAttributes } from "react";
-import { motion } from "framer-motion";
+import { forwardRef } from "react";
+import { motion, type HTMLMotionProps } from "framer-motion";
 import { Plus } from "lucide-react";
 import cn from "classnames";
 
-export type FabProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+export type FabProps = HTMLMotionProps<"button"> & {
   isOpen?: boolean;
 };
 

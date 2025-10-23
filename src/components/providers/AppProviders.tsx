@@ -19,11 +19,12 @@ focusManager.setEventListener((handleFocus) => {
   };
 
   window.addEventListener("visibilitychange", onVisibility, false);
-  window.addEventListener("focus", handleFocus, false);
+  const onFocus = () => handleFocus();
+  window.addEventListener("focus", onFocus, false);
 
   return () => {
     window.removeEventListener("visibilitychange", onVisibility, false);
-    window.removeEventListener("focus", handleFocus, false);
+    window.removeEventListener("focus", onFocus, false);
   };
 });
 

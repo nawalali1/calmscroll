@@ -73,7 +73,7 @@ export function useTodayHabits() {
       if (!userId) throw new Error("User not ready");
       const { start, end } = todayRange();
       const { data, error } = await supabase
-        .from<TaskRow>("tasks")
+        .from("tasks")
         .select("id, title, description, status, due_at, kind")
         .eq("user_id", userId)
         .gte("due_at", start)
@@ -82,7 +82,9 @@ export function useTodayHabits() {
 
       if (error) return [];
 
-      return (data ?? []).map<HabitItem>((item) => ({
+      const rows = (data ?? []) as TaskRow[];
+
+      return rows.map<HabitItem>((item) => ({
         id: item.id,
         title: item.title ?? item.description ?? "Untitled habit",
         status: resolveStatus(item.status),

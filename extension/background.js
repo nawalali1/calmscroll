@@ -11,7 +11,7 @@ function matchesDomain(urlStr, domains) {
   try {
     const u = new URL(urlStr);
     return domains.some((domain) => u.hostname.includes(domain));
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -53,7 +53,7 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
     if (tab?.url) {
       maybeNudge(tab.url);
     }
-  } catch (error) {
+  } catch {
     // noop
   }
 });

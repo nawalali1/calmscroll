@@ -1,9 +1,6 @@
 "use client";
 
-import { ReactNode, useEffect, useRef } from "react";
-import { createPortal } from "react-dom";
-
-const FOCUSABLE = 'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])';
+import { useEffect, type ReactNode } from "react";
 
 type BottomSheetProps = {
   open: boolean;
@@ -13,77 +10,35 @@ type BottomSheetProps = {
   children: ReactNode;
 };
 
-export function BottomSheet({ open, onClose, title, description, children }: BottomSheetProps) {
-  const panelRef = useRef<HTMLDivElement | null>(null);
-  const restoreFocusRef = useRef<HTMLElement | null>(null);
-
+export default function BottomSheet({ open, onClose, title, description, children }: BottomSheetProps) {
   useEffect(() => {
-    if (!open || typeof document === "undefined") return;
-    restoreFocusRef.current = document.activeElement as HTMLElement;
-    const panel = panelRef.current;
-    if (!panel) return;
-
-    const focusables = Array.from(panel.querySelectorAll<HTMLElement>(FOCUSABLE));
-    focusables[0]?.focus();
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-      if (event.key === "Tab" && focusables.length > 0) {
-        const first = focusables[0];
-        const last = focusables[focusables.length - 1];
-        if (event.shiftKey && document.activeElement === first) {
-          event.preventDefault();
-          last.focus();
-        } else if (!event.shiftKey && document.activeElement === last) {
-          event.preventDefault();
-          first.focus();
-        }
-      }
+    if (!open) return;
+    const onEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") onClose();
     };
-
-    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keydown", onEsc);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      restoreFocusRef.current?.focus();
+      window.removeEventListener("keydown", onEsc);
+      document.body.style.overflow = previousOverflow;
     };
   }, [open, onClose]);
 
-  useEffect(() => {
-    if (typeof document === "undefined") return;
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [open]);
+  if (!open) return null;
 
-  if (!open || typeof document === "undefined") return null;
-
-  return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/45 px-4 pb-6" role="dialog" aria-modal="true">
-      <button
-        aria-label="Close sheet"
-        className="absolute inset-0 cursor-default"
-        type="button"
-        onClick={onClose}
-      />
+  return (
+    <div role="dialog" aria-modal="true" className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div
-        ref={panelRef}
-        className="relative w-full max-w-md rounded-t-3xl bg-white p-6 text-slate-900 shadow-2xl transition-transform duration-200 ease-out dark:bg-neutral-900 dark:text-white"
+        className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[430px]
+                   rounded-t-2xl bg-white/80 backdrop-blur-md dark:bg-neutral-900/70
+                   p-4 pb-6 shadow-[0_-8px_30px_rgba(0,0,0,0.2)]"
       >
-        <div className="mx-auto mb-4 h-1 w-12 rounded-full bg-slate-300 dark:bg-white/20" aria-hidden />
-        {title ? <h2 className="text-lg font-semibold text-slate-900 dark:text-white">{title}</h2> : null}
-        {description ? (
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{description}</p>
-        ) : null}
-        <div className="mt-4 space-y-4">{children}</div>
+        {title ? <h3 className="text-base font-semibold text-slate-900 dark:text-white">{title}</h3> : null}
+        {description ? <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{description}</p> : null}
+        <div className="mt-3 space-y-3">{children}</div>
       </div>
-    </div>,
-    document.body
+    </div>
   );
 }
-
-export default BottomSheet;

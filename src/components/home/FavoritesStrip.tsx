@@ -28,7 +28,20 @@ async function fetchFavorites(userId: string): Promise<FavoriteItem[]> {
     .limit(FAVORITES_LIMIT);
 
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((item) => {
+    const feed = Array.isArray(item.feed_items) ? item.feed_items[0] : item.feed_items;
+    return {
+      id: String(item.id),
+      feed_items: feed
+        ? {
+            id: String(feed.id ?? ""),
+            title: String(feed.title ?? ""),
+            kind: String(feed.kind ?? ""),
+            content: String(feed.content ?? ""),
+          }
+        : null,
+    };
+  });
 }
 
 export function FavoritesStrip() {

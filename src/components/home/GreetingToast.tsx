@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { X } from "lucide-react";
 import Button from "@/components/ui/Button";
 
@@ -11,12 +11,12 @@ type GreetingToastProps = {
   onDismiss: () => void;
 };
 
-const variants = {
+const variants: Variants = {
   hidden: { opacity: 0, y: -20 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.3, ease: [0.21, 0.72, 0.42, 1] },
+    transition: { duration: 0.3, ease: [0.21, 0.72, 0.42, 1] as [number, number, number, number] },
   },
   exit: { opacity: 0, y: -20, transition: { duration: 0.2 } },
 };
@@ -47,10 +47,8 @@ export function GreetingToast({ firstName, open, onDismiss }: GreetingToastProps
               </div>
               <Button
                 type="button"
-                variant="ghost"
-                size="sm"
                 aria-label="Dismiss greeting"
-                className="min-h-[32px] p-0 text-[var(--ink-muted)]"
+                className="min-h-[32px] rounded-full border border-transparent bg-transparent p-0 text-[var(--ink-muted)] hover:bg-white/70"
                 onClick={onDismiss}
               >
                 <X className="h-4 w-4" aria-hidden />

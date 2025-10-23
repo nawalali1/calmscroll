@@ -99,8 +99,9 @@ export default function IntentionsPage() {
   };
 
   const requestPermission = async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
-      if (typeof window !== "undefined") window.alert("Notifications not supported");
+    const globalWindow = typeof window !== "undefined" ? window : undefined;
+    if (!globalWindow || !("Notification" in globalWindow)) {
+      console.warn("Notifications not supported");
       return;
     }
     try {
