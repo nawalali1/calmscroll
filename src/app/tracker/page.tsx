@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, Frown, Heart, Meh, Smile, Sparkles, Sun } from "lucide-react";
 import GlassyCard from "@/components/GlassyCard";
 import BottomNav from "@/components/BottomNav";
+import { supabase } from "@/lib/supabaseClient";
 
 const DAILY_SCORE = 72;
 
@@ -88,12 +89,42 @@ export default function TrackerPage() {
     return day === 0 ? 6 : day - 1;
   }, []);
 
-  const handleMoodSelect = (index: number) => {
-    setSelectedMood(index);
+  const markTodayLogged = useCallback(() => {
     setWeekLog((prev) =>
       prev.map((entry, entryIndex) => (entryIndex === todayIndex ? { ...entry, logged: true } : entry))
     );
-  };
+  }, [todayIndex]);
+
+  const handleMoodSelect = useCallback(
+    async (index: number) => {
+      try {
+        const {
+          data: { session },
+          error: sessionError,
+        } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!session) return;
+
+        const today = new Date().toISOString().split("T")[0];
+        const moodScore = index + 1;
+
+        const { error } = await supabase.from("metrics").upsert({
+          user_id: session.user.id,
+          date_key: today,
+          mood_score: moodScore,
+          updated_at: new Date().toISOString(),
+        });
+
+        if (error) throw error;
+
+        setSelectedMood(index);
+        markTodayLogged();
+      } catch (error) {
+        console.error("Failed to save mood:", error);
+      }
+    },
+    [markTodayLogged]
+  );
 
   const handleMoodKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (event.key === "ArrowRight" || event.key === "ArrowDown") {
@@ -106,7 +137,7 @@ export default function TrackerPage() {
     }
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      handleMoodSelect(index);
+      void handleMoodSelect(index);
     }
   };
 
@@ -154,7 +185,9 @@ export default function TrackerPage() {
                       type="button"
                       role="radio"
                       aria-checked={active}
-                      onClick={() => handleMoodSelect(index)}
+                      onClick={() => {
+                        void handleMoodSelect(index);
+                      }}
                       onKeyDown={(event) => handleMoodKeyDown(event, index)}
                       className={`flex h-14 w-14 items-center justify-center rounded-full border text-slate-600 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
                         active

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { Fab } from "@/components/ui/Fab";
 import BottomSheet from "@/components/BottomSheet";
 import BottomNav from "@/components/BottomNav";
+import { useHomeData } from "@/hooks/useHomeData";
 
 type QuickActionId = "breathe" | "reflect" | "stretch";
 
@@ -79,6 +80,11 @@ export default function HomePage() {
   const [activeAction, setActiveAction] = useState<QuickAction | null>(null);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const { userProfile, dailyProgress, loading } = useHomeData();
+  const userDisplayName = userProfile?.display_name?.trim() || "Friend";
+  const progressValue = Math.round(Math.max(0, Math.min(100, dailyProgress || 0)));
+  const progressCircumference = Math.PI * 100;
+  const progressOffset = progressCircumference * (1 - progressValue / 100);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -96,6 +102,14 @@ export default function HomePage() {
     return "Good Evening";
   }, []);
 
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F6F8FC] text-sm font-medium text-slate-600">
+        Loading...
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="page-shell">
@@ -104,7 +118,7 @@ export default function HomePage() {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm uppercase tracking-[0.3em] text-white/75">{greeting}</p>
-                <h1 className="mt-2 text-3xl font-semibold tracking-tight">Nawal</h1>
+                <h1 className="mt-2 text-3xl font-semibold tracking-tight">{userDisplayName}</h1>
               </div>
               <div className="relative flex h-20 w-20 items-center justify-center">
                 <div className="absolute inset-0 rounded-full border border-white/30 bg-white/10 backdrop-blur-md" aria-hidden />
@@ -130,14 +144,14 @@ export default function HomePage() {
                     stroke="url(#progress-arc)"
                     strokeWidth="8"
                     strokeLinecap="round"
-                    strokeDasharray={Math.PI * 100}
-                    strokeDashoffset={Math.PI * 100 * 0.22}
+                    strokeDasharray={progressCircumference}
+                    strokeDashoffset={progressOffset}
                     fill="none"
                     className={prefersReducedMotion ? "" : "transition-all duration-700 ease-out"}
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                  <span className="text-xl font-semibold leading-none">78%</span>
+                  <span className="text-xl font-semibold leading-none">{progressValue}%</span>
                   <span className="mt-1 text-[10px] uppercase tracking-[0.35em] text-white/70">Daily</span>
                 </div>
               </div>

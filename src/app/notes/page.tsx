@@ -222,7 +222,7 @@ export default function NotesPage() {
                           {note.content}
                         </p>
                         <p className="mt-3 text-xs font-medium uppercase tracking-[0.3em] text-slate-400">
-                          {formatTimestamp(note.updated_at || note.created_at)}
+                          {formatTimestamp(note.updated_at)}
                         </p>
                       </div>
                       <div className="flex shrink-0 items-center gap-2">
@@ -277,7 +277,10 @@ export default function NotesPage() {
             Title
             <input
               value={formState.title}
-              onChange={(event) => setFormState((prev) => ({ ...prev, title: event.currentTarget.value }))}
+              onChange={(event) => {
+                const { value } = event.currentTarget;
+                setFormState((prev) => ({ ...prev, title: value }));
+              }}
               placeholder="Today I noticed..."
               className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-base text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
             />
@@ -287,7 +290,10 @@ export default function NotesPage() {
             Mood
             <select
               value={formState.mood}
-              onChange={(event) => setFormState((prev) => ({ ...prev, mood: event.currentTarget.value }))}
+              onChange={(event) => {
+                const { value } = event.currentTarget;
+                setFormState((prev) => ({ ...prev, mood: value }));
+              }}
               className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-base text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
             >
               <option value="">No mood selected</option>
@@ -303,12 +309,13 @@ export default function NotesPage() {
             Reflection
             <textarea
               value={formState.content}
-              onChange={(event) =>
+              onChange={(event) => {
+                const { value } = event.currentTarget;
                 setFormState((prev) => ({
                   ...prev,
-                  content: event.currentTarget.value,
-                }))
-              }
+                  content: value,
+                }));
+              }}
               placeholder="Let your thoughts flow..."
               rows={5}
               className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-base text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"

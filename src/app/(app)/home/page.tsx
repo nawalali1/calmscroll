@@ -14,6 +14,7 @@ import {
   MoonStar,
   StickyNote,
   ClipboardList,
+  Heart,
 } from "lucide-react";
 import GradientHeader from "@/components/ui/GradientHeader";
 import ProgressRing from "@/components/ui/ProgressRing";
@@ -22,19 +23,13 @@ import GlassCard from "@/components/ui/GlassCard";
 import Fab from "@/components/ui/Fab";
 import BottomNav from "@/components/BottomNav";
 import Button from "@/components/ui/Button";
+import { useHomeExperience, type HomeFeedItem } from "@/hooks/useHomeExperience";
 
 type QuickAction = {
   key: string;
   label: string;
   description: string;
   ctaLabel: string;
-  icon: ReactNode;
-};
-
-type FocusItem = {
-  title: string;
-  description: string;
-  href: string;
   icon: ReactNode;
 };
 
@@ -62,29 +57,6 @@ const quickActions: QuickAction[] = [
   },
 ];
 
-const focusItems: FocusItem[] = [
-  {
-    title: "1-Minute Breathe",
-    description: "Relax your shoulders and match the guided breath tempo.",
-    href: "/tracker/breathe",
-    icon: <Wind className="h-6 w-6" aria-hidden />,
-  },
-  {
-    title: "Guided Reflection",
-    description: "Capture two prompts to see how your mood shifts today.",
-    href: "/notes/reflection",
-    icon: <NotebookPen className="h-6 w-6" aria-hidden />,
-  },
-  {
-    title: "Stretch Break",
-    description: "Step away for three mindful stretches to open your posture.",
-    href: "/tracker/stretch",
-    icon: <StretchVertical className="h-6 w-6" aria-hidden />,
-  },
-];
-
-const favoriteLabels = ["Morning Reset", "Focus Boost", "Lunchtime Pause", "Evening Wind Down", "Gentle Stretch"];
-
 const fabOptions = [
   { label: "New note", href: "/notes/new", icon: <StickyNote className="h-5 w-5" aria-hidden /> },
   { label: "New check in", href: "/tracker/new", icon: <ClipboardList className="h-5 w-5" aria-hidden /> },
@@ -99,6 +71,10 @@ const sheetMotion = {
 export default function HomePage() {
   const [activeAction, setActiveAction] = useState<QuickAction | null>(null);
   const [fabOpen, setFabOpen] = useState(false);
+  const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+
+  const { userProfile, dailyProgress, feedItems, favorites, loading, error, logQuickAction, logActivityStart, toggleFavorite, refetch } =
+    useHomeExperience();
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -115,11 +91,67 @@ export default function HomePage() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [activeAction, fabOpen]);
 
-  const progressValue = useMemo(() => 62, []);
+  const displayName = useMemo(() => {
+    if (!userProfile) return null;
+    if (userProfile.display_name) return userProfile.display_name;
+    if (userProfile.first_name) return userProfile.first_name;
+    if (userProfile.full_name) return userProfile.full_name.split(" ")[0];
+    return null;
+  }, [userProfile]);
+
+  const headerTitle = displayName ? `Welcome back, ${displayName}` : "Welcome to CalmScroll";
+  const headerSubtitle =
+    "Stay grounded with quick pauses, reflections, and mindful movement tailored to your day.";
+
+  const handleQuickActionStart = async (action: QuickAction) => {
+    try {
+      await logQuickAction(action.key);
+      setNotice({ tone: "success", text: `${action.label} logged. Nice work keeping your streak!` });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to log that action right now.";
+      setNotice({ tone: "error", text: message });
+    } finally {
+      setActiveAction(null);
+    }
+  };
+
+  const handleStartActivity = async (item: HomeFeedItem) => {
+    try {
+      await logActivityStart(item.id);
+      setNotice({ tone: "success", text: "Activity recorded. Keep up the calm momentum." });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to track this activity.";
+      setNotice({ tone: "error", text: message });
+    }
+  };
+
+  const handleToggleFavorite = async (item: HomeFeedItem) => {
+    try {
+      await toggleFavorite(item.id, item);
+      setNotice({
+        tone: "success",
+        text: item.isFavorite ? "Removed from favorites." : "Saved to favorites for quick access.",
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to update favorites.";
+      setNotice({ tone: "error", text: message });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(165deg,#0B3B64_0%,#5282FF_55%,#FFB3C7_100%)]">
+        <div className="flex flex-col items-center gap-4 text-white">
+          <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          <p className="text-sm font-medium uppercase tracking-[0.28em] text-white/80">Loading your calm space…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <main className="relative min-h-svh bg-[linear-gradient(160deg,#0B3B64_0%,#5282FF_52%,#FFB3C7_100%)] pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] text-slate-900">
-      <GradientHeader title="Dashboard" subtitle="Stay balanced with small, focused moments across your day.">
+      <GradientHeader title={headerTitle} subtitle={headerSubtitle}>
         <div className="flex w-full flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-col gap-4">
             <div className="inline-flex max-w-xs items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-xs font-medium uppercase tracking-[0.3em] text-white/75">
@@ -130,9 +162,38 @@ export default function HomePage() {
               Track mindful streaks and revisit your calm routines with gentle nudges tailored for the moment.
             </p>
           </div>
-          <ProgressRing value={progressValue} label="Today" />
+          <ProgressRing value={dailyProgress} label="Today" />
         </div>
       </GradientHeader>
+
+      {(error || notice) && (
+        <div className="mx-auto mt-6 w-full max-w-xl px-6">
+          {error ? (
+            <div className="flex items-center justify-between rounded-2xl border border-white/30 bg-white/15 px-4 py-3 text-sm font-medium text-white backdrop-blur-md">
+              <span>{error}</span>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className="rounded-full border border-white/40 bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.28em] text-white/80 transition hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              >
+                Retry
+              </button>
+            </div>
+          ) : null}
+          {notice ? (
+            <div
+              className={`mt-3 rounded-2xl border px-4 py-3 text-sm font-medium backdrop-blur-md ${
+                notice.tone === "error"
+                  ? "border-rose-200/40 bg-rose-200/20 text-rose-50"
+                  : "border-emerald-200/40 bg-emerald-200/20 text-emerald-50"
+              }`}
+              role={notice.tone === "error" ? "alert" : "status"}
+            >
+              {notice.text}
+            </div>
+          ) : null}
+        </div>
+      )}
 
       <section aria-labelledby="quick-actions-heading" className="mx-auto flex w-full max-w-xl flex-col gap-6 px-6 py-8 sm:px-8">
         <motion.div
@@ -175,27 +236,61 @@ export default function HomePage() {
           </div>
 
           <div className="space-y-3">
-            {focusItems.map((item, index) => (
+            {feedItems.length === 0 ? (
+              <div className="rounded-3xl border border-white/25 bg-white/15 px-6 py-8 text-center text-white/75 backdrop-blur-lg">
+                Nothing queued yet. Check back later for fresh mindful prompts.
+              </div>
+            ) : (
+              feedItems.map((item, index) => (
               <motion.div
-                key={item.title}
+                key={item.id}
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.2, ease: "easeOut", delay: 0.14 + index * 0.05 }}
               >
-                <GlassCard className="flex items-center justify-between gap-4 border-white/25 bg-white/18 px-5 py-4 text-white shadow-[0_24px_60px_-40px_rgba(9,52,115,0.85)] backdrop-blur-lg">
+                <GlassCard className="flex items-center justify-between gap-4 border-white/30 bg-white/18 px-5 py-4 text-white shadow-[0_24px_60px_-40px_rgba(9,52,115,0.85)] backdrop-blur-lg">
                   <div className="flex items-start gap-4 text-left">
                     <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white">
-                      {item.icon}
+                      {item.kind === "breathe" ? (
+                        <Wind className="h-6 w-6" aria-hidden />
+                      ) : item.kind === "reflect" ? (
+                        <NotebookPen className="h-6 w-6" aria-hidden />
+                      ) : item.kind === "stretch" ? (
+                        <StretchVertical className="h-6 w-6" aria-hidden />
+                      ) : (
+                        <Sparkles className="h-6 w-6" aria-hidden />
+                      )}
                     </span>
                     <div className="space-y-1">
+                      <span className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
+                        {item.kind ?? "Mindful moment"}
+                      </span>
                       <h3 className="text-base font-semibold tracking-tight text-white">{item.title}</h3>
-                      <p className="text-sm text-white/70">{item.description}</p>
+                      <p className="text-sm text-white/70 line-clamp-2">{item.content}</p>
                     </div>
                   </div>
                   <div className="flex flex-col items-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        void handleToggleFavorite(item);
+                      }}
+                      className={`inline-flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur-md transition ${
+                        item.isFavorite
+                          ? "border-white/80 bg-white/70 text-rose-500"
+                          : "border-white/30 bg-white/10 text-white/80 hover:border-white/60 hover:bg-white/20"
+                      }`}
+                      aria-pressed={item.isFavorite}
+                      aria-label={item.isFavorite ? "Remove from favorites" : "Save to favorites"}
+                    >
+                      <Heart className="h-4 w-4" aria-hidden fill={item.isFavorite ? "currentColor" : "none"} />
+                    </button>
                     <ChevronRight className="h-5 w-5 text-white/55" aria-hidden />
                     <Link
-                      href={item.href}
+                      href={item.action ?? `/tracker/${item.kind ?? "focus"}`}
+                      onClick={() => {
+                        void handleStartActivity(item);
+                      }}
                       className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/75 transition hover:border-white/60 hover:bg-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                     >
                       Start
@@ -203,7 +298,8 @@ export default function HomePage() {
                   </div>
                 </GlassCard>
               </motion.div>
-            ))}
+              ))
+            )}
           </div>
         </motion.section>
 
@@ -220,17 +316,36 @@ export default function HomePage() {
               Favorites
             </h2>
           </div>
-          <div className="-mx-6 flex gap-3 overflow-x-auto px-6 pb-1">
-            {favoriteLabels.map((label) => (
-              <span
-                key={label}
-                className="inline-flex min-w-[9rem] items-center justify-between gap-3 rounded-full border border-white/25 bg-white/12 px-4 py-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/70 backdrop-blur-md"
-              >
-                {label}
-                <Flower className="h-4 w-4 text-white/50" aria-hidden />
-              </span>
-            ))}
-          </div>
+          {favorites.length === 0 ? (
+            <p className="text-sm text-white/70">Mark an activity with the heart icon to pin it here for later.</p>
+          ) : (
+            <div className="-mx-6 flex gap-3 overflow-x-auto px-6 pb-1">
+              {favorites.map((favorite) => (
+                <button
+                  key={favorite.id}
+                  type="button"
+                  onClick={() => {
+                    void handleStartActivity({
+                      id: favorite.feed_id,
+                      title: favorite.title,
+                      content: favorite.content,
+                      kind: favorite.kind,
+                      action: null,
+                      created_at: favorite.created_at ?? "",
+                      isFavorite: true,
+                    });
+                  }}
+                  className="inline-flex min-w-[10rem] flex-col items-start justify-between gap-2 rounded-2xl border border-white/25 bg-white/12 px-4 py-3 text-left text-white backdrop-blur-md transition hover:-translate-y-0.5 hover:border-white/60 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                >
+                  <span className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.28em] text-white/70">
+                    <Flower className="h-3.5 w-3.5 text-white/60" aria-hidden />
+                    {favorite.kind ?? "Favorite"}
+                  </span>
+                  <p className="line-clamp-2 text-sm font-medium text-white/90">{favorite.title}</p>
+                </button>
+              ))}
+            </div>
+          )}
         </motion.section>
       </section>
 
@@ -285,7 +400,9 @@ export default function HomePage() {
               <div className="mt-6 flex flex-col gap-4">
                 <Button
                   type="button"
-                  onClick={() => setActiveAction(null)}
+                  onClick={() => {
+                    void handleQuickActionStart(activeAction);
+                  }}
                   className="w-full rounded-full bg-slate-900 text-white hover:brightness-105"
                 >
                   {activeAction.ctaLabel}

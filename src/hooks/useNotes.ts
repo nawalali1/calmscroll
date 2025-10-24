@@ -3,29 +3,80 @@
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
+type NoteRow = {
+  id: string;
+  user_id: string;
+  content: string;
+  updated_at: string;
+  deleted_at?: string | null;
+};
+
+type NoteContentPayload = {
+  title?: string;
+  mood?: string;
+  body: string;
+};
+
 export interface Note {
   id: string;
   user_id: string;
-  title: string | null;
+  title: string;
   content: string;
-  mood?: string | null;
-  tags?: string[] | null;
-  created_at: string;
+  mood: string;
   updated_at: string;
+  deleted_at?: string | null;
 }
 
 type CreateNoteInput = {
   content: string;
   title?: string;
   mood?: string;
-  tags?: string[];
 };
 
 type UpdateNoteInput = {
   title?: string | null;
   content?: string;
   mood?: string | null;
-  tags?: string[] | null;
+};
+
+const serializeNoteContent = ({ title, mood, body }: NoteContentPayload) =>
+  JSON.stringify({
+    title,
+    mood,
+    body,
+  });
+
+const parseNoteContent = (raw: string): NoteContentPayload => {
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && "body" in parsed) {
+      return {
+        title: typeof parsed.title === "string" ? parsed.title : "",
+        mood: typeof parsed.mood === "string" ? parsed.mood : "",
+        body: typeof parsed.body === "string" ? parsed.body : "",
+      };
+    }
+  } catch {
+    // Fall through to default structure
+  }
+  return {
+    title: "",
+    mood: "",
+    body: raw,
+  };
+};
+
+const mapRowToNote = (row: NoteRow): Note => {
+  const parsed = parseNoteContent(row.content);
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    title: parsed.title ?? "",
+    content: parsed.body ?? "",
+    mood: parsed.mood ?? "",
+    updated_at: row.updated_at,
+    deleted_at: row.deleted_at ?? null,
+  };
 };
 
 export function useNotes() {
@@ -56,21 +107,22 @@ export function useNotes() {
 
       if (notesError) throw notesError;
 
-      setNotes((data as Note[]) || []);
+      const mapped = ((data ?? []) as NoteRow[]).map((row) => mapRowToNote(row));
+      setNotes(mapped);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to fetch notes";
       setError(message);
       console.error("Error fetching notes:", err);
-      setNotes([]);
     } finally {
       setLoading(false);
     }
   }, []);
 
   const createNote = useCallback(
-    async ({ content, title, mood, tags }: CreateNoteInput) => {
+    async ({ content, title, mood }: CreateNoteInput) => {
       try {
-        if (!content.trim()) throw new Error("Content is required");
+        const sanitizedContent = content.trim();
+        if (!sanitizedContent) throw new Error("Content is required");
 
         const {
           data: { session },
@@ -80,18 +132,21 @@ export function useNotes() {
         if (!session) return null;
 
         const timestamp = new Date().toISOString();
+        const payload = {
+          user_id: session.user.id,
+          content: serializeNoteContent({
+            title: title?.trim() || `Reflection ${new Date().toLocaleDateString()}`,
+            mood: mood?.trim() || "",
+            body: sanitizedContent,
+          }),
+          updated_at: timestamp,
+        };
 
         const { data, error: insertError } = await supabase
           .from("notes")
           .insert([
             {
-              user_id: session.user.id,
-              content,
-              title: title || `Reflection ${new Date().toLocaleDateString()}`,
-              mood: mood ?? null,
-              tags: tags ?? [],
-              created_at: timestamp,
-              updated_at: timestamp,
+              ...payload,
             },
           ])
           .select()
@@ -99,7 +154,7 @@ export function useNotes() {
 
         if (insertError) throw insertError;
 
-        const created = data as Note;
+        const created = mapRowToNote(data as NoteRow);
         setNotes((prev) => [created, ...prev]);
         return created;
       } catch (err) {
@@ -123,13 +178,35 @@ export function useNotes() {
       if (sessionError) throw sessionError;
       if (!session) return null;
 
+      const existing = notes.find((note) => note.id === id);
+      const nextBody =
+        "content" in updates
+          ? typeof updates.content === "string"
+            ? updates.content.trim()
+            : existing?.content ?? ""
+          : existing?.content ?? "";
+      const nextTitle =
+        "title" in updates
+          ? typeof updates.title === "string"
+            ? updates.title.trim()
+            : ""
+          : existing?.title ?? "";
+      const nextMood =
+        "mood" in updates
+          ? typeof updates.mood === "string"
+            ? updates.mood.trim()
+            : ""
+          : existing?.mood ?? "";
+      const nextContent = serializeNoteContent({
+        title: nextTitle,
+        mood: nextMood,
+        body: nextBody,
+      });
+
       const { data, error: updateError } = await supabase
         .from("notes")
         .update({
-          ...("content" in updates ? { content: updates.content } : {}),
-          ...("title" in updates ? { title: updates.title ?? null } : {}),
-          ...("mood" in updates ? { mood: updates.mood ?? null } : {}),
-          ...("tags" in updates ? { tags: updates.tags ?? [] } : {}),
+          content: nextContent,
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)
@@ -138,7 +215,7 @@ export function useNotes() {
 
       if (updateError) throw updateError;
 
-      const next = data as Note;
+      const next = mapRowToNote(data as NoteRow);
       setNotes((prev) => {
         const remaining = prev.filter((note) => note.id !== id);
         return [next, ...remaining];
@@ -150,7 +227,7 @@ export function useNotes() {
       console.error("Error updating note:", err);
       return null;
     }
-  }, []);
+  }, [notes]);
 
   const deleteNote = useCallback(async (id: string) => {
     try {
