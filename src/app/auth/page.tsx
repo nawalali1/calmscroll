@@ -17,7 +17,7 @@ type FieldId = keyof typeof INITIAL_VALUES;
 
 export default function LoginPage() {
   const router = useRouter();
-  const [values, setValues] = React.useState(INITIAL_VALUES);
+  const [formData, setFormData] = React.useState(INITIAL_VALUES);
   const [errors, setErrors] = React.useState<Record<FieldId, string>>({
     firstName: "",
     lastName: "",
@@ -37,28 +37,27 @@ export default function LoginPage() {
   }, []);
 
   const validate = React.useCallback((field: FieldId, value: string) => {
-    const trimmed = value.trim();
-    if (!trimmed) return "Required";
+    const trimmed = (value ?? "").trim();
+    if (!trimmed) return `${field} is required`;
     if (field === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return "Enter a valid email";
     if (field === "password" && trimmed.length < 6) return "Minimum 6 characters";
     return "";
   }, []);
 
   const handleChange = (field: FieldId) => (event: React.ChangeEvent<HTMLInputElement>) => {
-    const next = event.currentTarget.value;
-    setValues((prev) => ({ ...prev, [field]: next }));
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: validate(field, next) }));
-    }
+    const value = event.currentTarget?.value ?? "";
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: "" }));
   };
 
   const handleBlur = (field: FieldId) => (event: React.FocusEvent<HTMLInputElement>) => {
-    setErrors((prev) => ({ ...prev, [field]: validate(field, event.currentTarget.value) }));
+    const value = event.currentTarget?.value ?? "";
+    setErrors((prev) => ({ ...prev, [field]: validate(field, value) }));
   };
 
   const allValid = React.useMemo(
-    () => (Object.keys(values) as FieldId[]).every((field) => !validate(field, values[field])),
-    [validate, values]
+    () => (Object.keys(formData) as FieldId[]).every((field) => !validate(field, formData[field] ?? "")),
+    [validate, formData]
   );
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -66,7 +65,7 @@ export default function LoginPage() {
     if (isSubmitting) return;
 
     const nextErrors = Object.fromEntries(
-      (Object.keys(values) as FieldId[]).map((field) => [field, validate(field, values[field])])
+      (Object.keys(formData) as FieldId[]).map((field) => [field, validate(field, formData[field] ?? "")])
     ) as Record<FieldId, string>;
     setErrors(nextErrors);
     if (Object.values(nextErrors).some(Boolean)) return;
@@ -120,7 +119,7 @@ export default function LoginPage() {
                   type={field.type}
                   name={field.id}
                   autoComplete={field.autoComplete}
-                  value={values[field.id]}
+                  value={formData[field.id] ?? ""}
                   onChange={handleChange(field.id)}
                   onBlur={handleBlur(field.id)}
                   placeholder={field.placeholder}

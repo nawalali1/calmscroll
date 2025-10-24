@@ -2,6 +2,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 import AppShell from "@/components/AppShell";
 import AppProviders from "@/components/providers/AppProviders";
+import AuthGate from "@/components/providers/AuthGate";
 
 export const metadata: Metadata = {
   title: "CalmScroll",
@@ -13,7 +14,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <AppProviders>
-          <AppShell>{children}</AppShell>
+          <AuthGate>
+            <AppShell>{children}</AppShell>
+          </AuthGate>
         </AppProviders>
       </body>
     </html>
