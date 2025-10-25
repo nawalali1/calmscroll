@@ -95,6 +95,10 @@ export default function HomePage() {
     refetch,
   } = useHomeData();
 
+  const gradientBackground = {
+    backgroundImage: "linear-gradient(160deg,var(--bg-start) 0%,var(--bg-mid) 52%,var(--bg-end) 100%)",
+  };
+
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -238,7 +242,7 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(165deg,#0B3B64_0%,#5282FF_55%,#FFB3C7_100%)]">
+      <div className="flex min-h-screen items-center justify-center text-white transition-colors duration-300" style={gradientBackground}>
         <div className="flex flex-col items-center gap-4 text-white">
           <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/40 border-t-white" />
           <p className="text-sm font-medium uppercase tracking-[0.28em] text-white/80">Loading your calm space…</p>
@@ -248,7 +252,11 @@ export default function HomePage() {
   }
 
   return (
-    <main className="relative min-h-svh bg-[linear-gradient(160deg,#0B3B64_0%,#5282FF_52%,#FFB3C7_100%)] pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] text-slate-900">
+    <main
+      className="relative min-h-svh pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] text-[var(--ink)] transition-colors duration-300"
+      style={gradientBackground}
+    >
+    
       <GradientHeader title={headerTitle} subtitle={headerSubtitle}>
         <div className="flex w-full flex-col items-start gap-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-1 flex-col gap-4">
@@ -466,24 +474,24 @@ export default function HomePage() {
             <motion.div
               {...sheetMotion}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="w-full max-w-md rounded-3xl border border-white/20 bg-white/95 p-6 text-slate-900 shadow-2xl"
+              className="w-full max-w-md rounded-3xl border border-[var(--card-border)] bg-[var(--card)] p-6 text-[var(--ink)] shadow-2xl"
             >
               <div className="flex items-start justify-between gap-4">
                 <div className="space-y-2">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-slate-900/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-[var(--card)]/50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-[var(--ink-muted)]">
                     <MoonStar className="h-4 w-4" aria-hidden />
                     Flow
                   </div>
                   <h3 id="quick-action-sheet-title" className="text-xl font-semibold tracking-tight">
                     {activeAction.label}
                   </h3>
-                  <p className="max-w-sm text-sm text-slate-600">{activeAction.description}</p>
+                  <p className="max-w-sm text-sm text-[var(--ink-muted)]">{activeAction.description}</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setActiveAction(null)}
                   aria-label="Close quick action"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-[var(--card-border)] text-[var(--ink-muted)] transition hover:bg-[var(--card)]/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
                 >
                   <span aria-hidden className="text-lg leading-none">
                     ×
@@ -503,7 +511,7 @@ export default function HomePage() {
                 <button
                   type="button"
                   onClick={() => setActiveAction(null)}
-                  className="text-sm font-semibold text-slate-500 underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+                  className="text-sm font-semibold text-[var(--ink-muted)] underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
                 >
                   Not now
                 </button>
@@ -529,17 +537,17 @@ export default function HomePage() {
             <motion.div
               {...sheetMotion}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="w-full max-w-xs space-y-3 rounded-3xl border border-white/20 bg-white/95 p-4 shadow-xl"
+              className="w-full max-w-xs space-y-3 rounded-3xl border border-[var(--card-border)] bg-[var(--card)] p-4 text-[var(--ink)] shadow-xl"
               onClick={(event) => event.stopPropagation()}
             >
               {fabOptions.map((option) => (
                 <Link
                   key={option.href}
                   href={option.href}
-                  className="flex items-center gap-3 rounded-2xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-400"
+                  className="flex items-center gap-3 rounded-2xl border border-[var(--card-border)] px-4 py-3 text-sm font-semibold text-[var(--ink)] transition hover:border-[var(--accent)] hover:bg-[var(--card)]/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]"
                   onClick={() => setFabOpen(false)}
                 >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-900 text-white">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ink)] text-[var(--bg-start)]">
                     {option.icon}
                   </span>
                   {option.label}
