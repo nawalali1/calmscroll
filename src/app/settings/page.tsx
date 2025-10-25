@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import GlassyCard from "@/components/GlassyCard";
 import BottomSheet from "@/components/BottomSheet";
 import BottomNav from "@/components/BottomNav";
+import { useTheme } from "@/components/providers/ThemeProvider";
 
 const PROFILE_KEY = "calmscroll_profile";
-const THEME_KEY = "calmscroll_theme";
 const NOTIFICATIONS_KEY = "calmscroll_notifications";
 const REFLECTIONS_KEY = "calmscroll_reflections";
 
@@ -36,19 +36,11 @@ const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
   weeklySummary: false,
 };
 
-function applyTheme(preference: ThemeChoice) {
-  if (typeof window === "undefined") return;
-  const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const theme = preference === "system" ? (systemPrefersDark ? "dark" : "light") : preference;
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.classList.toggle("dark", theme === "dark");
-}
-
 export default function SettingsPage() {
+  const { themePreference, setTheme } = useTheme();
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [editingProfile, setEditingProfile] = useState(false);
   const [draftProfile, setDraftProfile] = useState<Profile>(DEFAULT_PROFILE);
-  const [themeChoice, setThemeChoice] = useState<ThemeChoice>("system");
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIFICATIONS);
 
   useEffect(() => {
@@ -74,11 +66,6 @@ export default function SettingsPage() {
       // ignore
     }
 
-    const storedTheme = window.localStorage.getItem(THEME_KEY) as ThemeChoice | null;
-    const initialTheme: ThemeChoice = storedTheme ?? "system";
-    setThemeChoice(initialTheme);
-    applyTheme(initialTheme);
-
     return () => undefined;
   }, []);
 
@@ -93,11 +80,7 @@ export default function SettingsPage() {
   };
 
   const updateTheme = (value: ThemeChoice) => {
-    setThemeChoice(value);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(THEME_KEY, value);
-    }
-    applyTheme(value);
+    setTheme(value);
   };
 
   const handleProfileSave = () => {
@@ -223,7 +206,7 @@ export default function SettingsPage() {
                     <label
                       key={option}
                       className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-semibold transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-indigo-400 ${
-                        themeChoice === option
+                        themePreference === option
                           ? "border-indigo-300 bg-indigo-500/10 text-indigo-600 dark:border-indigo-500 dark:text-indigo-300"
                           : "border-white/40 bg-white/40 text-slate-600 hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
                       }`}
@@ -233,7 +216,7 @@ export default function SettingsPage() {
                         type="radio"
                         name="theme"
                         value={option}
-                        checked={themeChoice === option}
+                        checked={themePreference === option}
                         onChange={() => updateTheme(option)}
                         className="h-5 w-5"
                       />
