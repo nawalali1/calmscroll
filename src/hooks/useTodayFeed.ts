@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSession } from "./useSession";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { seedFeedItems } from "@/lib/seed";
 import { todayKey } from "@/utils/dates";
 import { logger, logEvent } from "@/utils/logger";
@@ -25,6 +25,7 @@ function shuffle<T>(array: readonly T[]): T[] {
 }
 
 async function seedFeed(dayKey: string, count: number) {
+  const supabase = getSupabaseClient();
   if (count <= 0) return;
   const seeds = shuffle(seedFeedItems)
     .slice(0, Math.min(count, MAX_FEED_COUNT))
@@ -53,6 +54,7 @@ async function seedFeed(dayKey: string, count: number) {
 }
 
 async function fetchTodayFeed(userId: string, dayKey: string): Promise<FeedPreviewItem[]> {
+  const supabase = getSupabaseClient();
   const feedQuery = supabase
     .from("feed_items")
     .select("id, kind, title, content, action, created_at", { count: "exact" })
@@ -108,6 +110,7 @@ async function fetchTodayFeed(userId: string, dayKey: string): Promise<FeedPrevi
 }
 
 export function useTodayFeed(dayKey: string = todayKey()) {
+  const supabase = getSupabaseClient();
   const { session } = useSession();
   const userId = session?.user.id;
   const queryClient = useQueryClient();

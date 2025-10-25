@@ -31,3 +31,16 @@
   --blue-hero-b: #244b8a;
   --blue-hero-c: #5282ff;
 }
+/* Dark mode colors */
+.dark {
+  --bg-start: #0f172a;
+  --bg-mid: #1e293b;
+  --bg-end: #334155;
+  --card: #1e293b;
+  --card-border: #334155;
+  --ink: #f1f5f9;
+  --ink-muted: #cbd5e1;
+  --accent: #ff6b6b;
+  --success: #38bdf8;
+  --danger: #dc2626;
+}

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Activity, Frown, Heart, Meh, Smile, Sparkles, Sun } from "lucide-react";
 import GlassyCard from "@/components/GlassyCard";
 import BottomNav from "@/components/BottomNav";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 const DAILY_SCORE = 72;
 
@@ -97,6 +97,7 @@ export default function TrackerPage() {
 
   const handleMoodSelect = useCallback(
     async (index: number) => {
+      const supabase = getSupabaseClient();
       try {
         const {
           data: { session },

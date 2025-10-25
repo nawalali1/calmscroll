@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabase/client";
 import { todayKey } from "@/utils/dates";
 import { logger } from "@/utils/logger";
 
@@ -20,6 +20,7 @@ const METRICS_FIELDS =
   "id, user_id, day_key, minutes_read, cards_read, tasks_done, streak, open_count, mood, created_at, updated_at";
 
 export async function fetchMetricsRow(userId: string, dayKey: string): Promise<MetricsRow | null> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("metrics")
     .select(METRICS_FIELDS)
@@ -36,6 +37,7 @@ export async function fetchMetricsRow(userId: string, dayKey: string): Promise<M
 }
 
 export async function createMetricsRow(userId: string, dayKey: string): Promise<MetricsRow> {
+  const supabase = getSupabaseClient();
   const defaults: MetricsRow = {
     user_id: userId,
     day_key: dayKey,
@@ -62,6 +64,7 @@ export async function createMetricsRow(userId: string, dayKey: string): Promise<
 }
 
 export async function ensureTodayMetrics(userId: string, dayKey: string = todayKey()) {
+  const supabase = getSupabaseClient();
   const existing = await fetchMetricsRow(userId, dayKey);
   if (existing) {
     // Increment open_count on fresh visit.
@@ -89,6 +92,7 @@ export async function updateMetrics(
   dayKey: string,
   patch: Partial<Pick<MetricsRow, "minutes_read" | "cards_read" | "tasks_done" | "streak" | "open_count" | "mood">>
 ): Promise<MetricsRow> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("metrics")
     .update(patch)

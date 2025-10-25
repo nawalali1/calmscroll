@@ -1,4 +1,4 @@
-import { supabase } from "./supabaseClient";
+import { getSupabaseClient } from "./supabase/client";
 import { logger } from "@/utils/logger";
 
 export type ExportBundle = {
@@ -9,6 +9,7 @@ export type ExportBundle = {
 };
 
 export async function exportUserData(userId: string): Promise<ExportBundle> {
+  const supabase = getSupabaseClient();
   const [notes, tasks, favorites, metrics] = await Promise.all([
     supabase.from("notes").select("*").eq("user_id", userId),
     supabase.from("tasks").select("*").eq("user_id", userId),
@@ -30,6 +31,7 @@ export async function exportUserData(userId: string): Promise<ExportBundle> {
 }
 
 export async function resetUserData(userId: string) {
+  const supabase = getSupabaseClient();
   const tables = ["notes", "tasks", "favorites", "metrics"] as const;
   for (const table of tables) {
     const { error } = await supabase.from(table).delete().eq("user_id", userId);

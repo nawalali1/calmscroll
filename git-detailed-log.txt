@@ -1,0 +1,260 @@
+commit 7c7b9541265da2526583cac7425db4aa02744b80
+Author: Nawal Ali <nawalalixo02@hotmail.com>
+Date:   Fri Oct 24 22:57:25 2025 +0100
+
+    feat: complete backend integration and frontend fixes
+    
+    - Added mood_score column to metrics table via database migration
+    - Fixed tracker page to save mood selections to backend
+    - Created useHomeData hook for real user progress tracking
+    - Connected home page to use real user data from database
+    - Notes page fully functional with backend integration
+    - All pages now use real Supabase data instead of mock data
+    - Added proper error handling and loading states
+    - Backend and frontend now fully synchronized
+
+ src/app/(app)/home/page.tsx    | 221 ++++++++++++++++++++-------
+ src/app/notes/page.tsx         |  21 ++-
+ src/app/page.tsx               |  22 ++-
+ src/app/tracker/page.tsx       |  45 +++++-
+ src/hooks/useHomeData.ts       |  69 +++++++++
+ src/hooks/useHomeExperience.ts | 330 +++++++++++++++++++++++++++++++++++++++++
+ src/hooks/useNotes.ts          | 125 +++++++++++++---
+ 7 files changed, 740 insertions(+), 93 deletions(-)
+
+commit 1677fe6fc3a47ccb396ff9669f54a156c61e5087
+Author: Nawal Ali <nawalalixo02@hotmail.com>
+Date:   Fri Oct 24 14:51:22 2025 +0100
+
+    fix: auth redirect loops and login flow
+    
+    - Fixed infinite redirect between login pages
+    - Simplified root layout auth logic to only redirect from non-public paths
+    - Created working login page without session checks that cause loops
+    - Removed aggressive AuthGuard components
+    - Login page now properly renders form and handles authentication
+
+ src/app/(auth)/login/page.tsx         | 136 +++++++--
+ src/app/auth/page.tsx                 |  25 +-
+ src/app/layout.tsx                    |   5 +-
+ src/app/notes/page.tsx                | 520 +++++++++++++++++-----------------
+ src/components/providers/AuthGate.tsx |  82 ++++++
+ src/hooks/useNotes.ts                 | 196 +++++++++++++
+ 6 files changed, 666 insertions(+), 298 deletions(-)
+
+commit 4d53c087845059a6b62413678f0e74d8d2c3e170
+Author: Nawal Ali <nawalalixo02@hotmail.com>
+Date:   Fri Oct 24 00:27:24 2025 +0100
+
+    feat: complete app rebuild with comprehensive fixes
+    
+    - Fixed build system: removed turbopack, updated Next.js config
+    - Resolved TypeScript errors: Framer Motion variants, Supabase typing
+    - Fixed Tracker page blank screen issue
+    - Restored UI components: Button variants, BottomSheet, Dialog, Sheet
+    - Added proper Login page with auth routing
+    - Cleaned all ESLint warnings and unused code
+    - All pages now functional: Home, Tracker, Notes, Login
+    - Navigation working between all routes
+    - Build and lint commands now pass successfully
+
+ extension/background.js                   |   4 +-
+ next.config.ts                            |   8 +-
+ package.json                              |   2 +-
+ src/app/(app)/home/page.tsx               |   2 +-
+ src/app/(auth)/login/page.tsx             |  32 ++-
+ src/app/auth/page.tsx                     |  78 ++++---
+ src/app/globals.css                       |   8 +-
+ src/app/intentions/page.tsx               |   5 +-
+ src/app/notes/page.tsx                    | 367 +++++++++++++++---------------
+ src/app/page.tsx                          | 336 ++++++++++++++-------------
+ src/app/settings/page.tsx                 |   7 +-
+ src/app/tracker/page.tsx                  | 271 ++++++++++------------
+ src/components/AppShell.tsx               |  18 +-
+ src/components/BottomNav.tsx              |  37 +++
+ src/components/BottomSheet.tsx            |  87 ++-----
+ src/components/home/BreatheModal.tsx      |  10 +-
+ src/components/home/FavoritesStrip.tsx    |  15 +-
+ src/components/home/FeedPreview.tsx       |  10 +-
+ src/components/home/GreetingPulse.tsx     |  10 +-
+ src/components/home/GreetingToast.tsx     |  10 +-
+ src/components/providers/AppProviders.tsx |   5 +-
+ src/components/ui/BottomNav.tsx           |  71 ------
+ src/components/ui/Button.tsx              |  43 +++-
+ src/components/ui/Dialog.tsx              |   6 +-
+ src/components/ui/Fab.tsx                 |   6 +-
+ src/components/ui/Sheet.tsx               |   6 +-
+ src/components/ui/Tabs.tsx                |   3 +-
+ src/hooks/useTodayHabits.ts               |   6 +-
+ src/utils/logger.ts                       |   1 -
+ 29 files changed, 721 insertions(+), 743 deletions(-)
+
+commit 9242019544fb2aa49904b6c89e829a613d8a06a8
+Author: Nawal Ali <nawalalixo02@hotmail.com>
+Date:   Wed Oct 22 22:44:28 2025 +0100
+
+    feat: setting page
+
+ src/app/auth/page.tsx                | 234 +++++++++++--------
+ src/app/globals.css                  |  25 ++-
+ src/app/notes/page.tsx               | 230 ++++++++++---------
+ src/app/page.tsx                     | 423 +++++++++++++++++------------------
+ src/app/settings/page.tsx            | 389 ++++++++++++++++++++++++++------
+ src/app/tracker/page.tsx             | 308 +++++++++++++------------
+ src/components/BottomSheet.tsx       |  89 ++++++++
+ src/components/IconButton.tsx        |   2 +-
+ src/components/ui/BottomNav.tsx      |  16 +-
+ src/components/ui/GradientHeader.tsx |  18 +-
+ 10 files changed, 1078 insertions(+), 656 deletions(-)
+
+commit 51dbbfe8ae26cdfaee72b44a345df0db1b69d6d6
+Author: Nawal Ali <nawalalixo02@hotmail.com>
+Date:   Wed Oct 22 21:19:54 2025 +0100
+
+    feat: upgrade Notes and Tracker UI
+
+ src/app/globals.css           |  10 ++
+ src/app/notes/page.tsx        | 367 ++++++++++++++++++++++++++++++------------
+ src/app/tracker/page.tsx      | 232 +++++++++++++++++++++++++-
+ src/components/GlassyCard.tsx |  19 +++
+ src/components/IconButton.tsx |  31 ++++
+ 5 files changed, 547 insertions(+), 112 deletions(-)
+
+commit 685eda62ccbf5b11aa9aeed12b6f922c57502c56
+Author: Nawal Ali <nawalalixo02@hotmail.com>
+Date:   Wed Oct 22 20:39:25 2025 +0100
+
+    Update Notes page -> Reflections UX (notes-list-v2) and rename tab label
+
+ README.md                       |  10 ++
+ extension/background.js         |  59 +++++++
+ extension/icon128.png           |   0
+ extension/manifest.json         |  11 ++
+ extension/options.html          |  25 +++
+ extension/options.js            | 122 ++++++++++++++
+ src/app/intentions/page.tsx     | 354 ++++++++++++++++++++++++++++++++++++++++
+ src/app/notes/page.tsx          | 190 ++++++++++++++++++++-
+ src/components/ui/BottomNav.tsx |   2 +-
+ src/lib/notifications.ts        |  16 ++
+ 10 files changed, 781 insertions(+), 8 deletions(-)
+
+commit 487697e0c97eadd2fce463ed031164db50d34ad9
+Author: Nawal Ali <nawalalixo02@hotmail.com>
+Date:   Wed Oct 22 20:07:30 2025 +0100
+
+    Fix login redirect loop and working session handling
+
+ repo-audit.txt                |  59 +++-------
+ src/app/(auth)/login/page.tsx |   4 +-
+ src/app/auth/page.tsx         | 262 +++++++++++++++---------------------------
+ src/app/page.tsx              |   8 ++
+ src/components/AppShell.tsx   |  24 ++--
+ src/components/ui/Button.tsx  |  48 +++-----
+ src/hooks/useSession.ts       |  42 ++++---
+ 7 files changed, 173 insertions(+), 274 deletions(-)
+
+commit 94ca5032d477b67049403d5e39c43f20e24b2430
+Author: Nawal Ali <nawalalixo02@hotmail.com>
+Date:   Wed Oct 22 19:35:03 2025 +0100
+
+    Initial commit of CalmScroll project
+
+ RLS_DEV_POLICIES.sql                       |  49 ++++
+ next.config.ts                             |   6 +-
+ package-lock.json                          | 204 +++++++++++++++-
+ package.json                               |  16 +-
+ project-tree.txt                           | 105 +++++++++
+ repo-audit.txt                             |  44 ++++
+ src/app/(app)/home/page.tsx                | 344 +++++++++++++++++++++++++++
+ src/app/(auth)/login/page.tsx              |   3 +
+ src/app/auth/_callback_disabled/route.ts   |  12 +
+ src/app/auth/page.tsx                      | 203 ++++++++++++++++
+ src/app/globals.css                        |  44 ++--
+ src/app/layout.tsx                         |  33 +--
+ src/app/notes/page.tsx                     |  12 +
+ src/app/page.tsx                           | 365 +++++++++++++++++++++--------
+ src/app/settings/page.tsx                  | 100 ++++++++
+ src/app/tracker/page.tsx                   |  12 +
+ src/components/AppShell.tsx                |  49 ++++
+ src/components/TabBar.tsx                  |  59 +++++
+ src/components/home/BreatheModal.tsx       | 137 +++++++++++
+ src/components/home/FabCluster.tsx         |  86 +++++++
+ src/components/home/FavoritesStrip.tsx     |  83 +++++++
+ src/components/home/FeatureTiles.tsx       | 146 ++++++++++++
+ src/components/home/FeedPreview.tsx        | 189 +++++++++++++++
+ src/components/home/GreetingCard.tsx       |  71 ++++++
+ src/components/home/GreetingPulse.tsx      |  64 +++++
+ src/components/home/GreetingToast.tsx      |  66 ++++++
+ src/components/home/HabitsToday.tsx        | 100 ++++++++
+ src/components/home/HeroHeader.tsx         |  50 ++++
+ src/components/home/KpiChips.tsx           |  57 +++++
+ src/components/home/MoodLog.tsx            |  76 ++++++
+ src/components/home/MoodSelector.tsx       |  93 ++++++++
+ src/components/home/ProgramCards.tsx       | 122 ++++++++++
+ src/components/home/ProgressRing.tsx       | 117 +++++++++
+ src/components/home/ProgressSummary.tsx    |  60 +++++
+ src/components/home/QuickActions.tsx       |  88 +++++++
+ src/components/home/TrackerHero.tsx        |  89 +++++++
+ src/components/home/WaveDivider.tsx        |  27 +++
+ src/components/home/types.ts               |  11 +
+ src/components/providers/AppProviders.tsx  |  57 +++++
+ src/components/providers/ThemeProvider.tsx |  60 +++++
+ src/components/ui/AuthCard.tsx             |  24 ++
+ src/components/ui/BottomNav.tsx            |  69 ++++++
+ src/components/ui/Button.tsx               |  45 ++++
+ src/components/ui/Card.tsx                 |  27 +++
+ src/components/ui/Chip.tsx                 |  41 ++++
+ src/components/ui/Dialog.tsx               | 110 +++++++++
+ src/components/ui/Fab.tsx                  |  34 +++
+ src/components/ui/GlassCard.tsx            |  26 ++
+ src/components/ui/GradientHeader.tsx       |  63 +++++
+ src/components/ui/IconButton.tsx           |  33 +++
+ src/components/ui/Input.tsx                |  68 ++++++
+ src/components/ui/ProgressRing.tsx         |  91 +++++++
+ src/components/ui/QuickActionPill.tsx      |  37 +++
+ src/components/ui/Sheet.tsx                |  82 +++++++
+ src/components/ui/Skeleton.tsx             |  21 ++
+ src/components/ui/Tabs.tsx                 |  83 +++++++
+ src/components/ui/Toast.tsx                |  85 +++++++
+ src/hooks/useDailyMetrics.ts               |  91 +++++++
+ src/hooks/useFeed.ts                       | 127 ++++++++++
+ src/hooks/useSession.ts                    |  31 +++
+ src/hooks/useTodayFeed.ts                  | 163 +++++++++++++
+ src/hooks/useTodayHabits.ts                | 105 +++++++++
+ src/lib/exportData.ts                      |  41 ++++
+ src/lib/metrics.ts                         | 120 ++++++++++
+ src/lib/motion.ts                          |  38 +++
+ src/lib/offlineQueue.ts                    | 105 +++++++++
+ src/lib/seed.ts                            | 123 ++++++++++
+ src/lib/supabaseClient.ts                  |  19 ++
+ src/styles/tokens.css                      |  33 +++
+ src/utils/dates.ts                         |  42 ++++
+ src/utils/json.ts                          |  18 ++
+ src/utils/logger.ts                        |  47 ++++
+ src/utils/name.ts                          |  22 ++
+ 73 files changed, 5428 insertions(+), 145 deletions(-)
+
+commit 09ef384b9d4d39fbfecc91b589bc79fb128453be
+Author: Nawal Ali <nawalalixo02@hotmail.com>
+Date:   Sun Oct 19 11:04:31 2025 +0100
+
+    Initial commit from Create Next App
+
+ .gitignore          |   41 +
+ README.md           |   36 +
+ eslint.config.mjs   |   25 +
+ next.config.ts      |    7 +
+ package-lock.json   | 5706 +++++++++++++++++++++++++++++++++++++++++++++++++++
+ package.json        |   27 +
+ postcss.config.mjs  |    5 +
+ public/file.svg     |    1 +
+ public/globe.svg    |    1 +
+ public/next.svg     |    1 +
+ public/vercel.svg   |    1 +
+ public/window.svg   |    1 +
+ src/app/favicon.ico |  Bin 0 -> 25931 bytes
+ src/app/globals.css |   26 +
+ src/app/layout.tsx  |   34 +
+ src/app/page.tsx    |  103 +
+ tsconfig.json       |   27 +
+ 17 files changed, 6042 insertions(+)

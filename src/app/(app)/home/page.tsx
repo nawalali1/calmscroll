@@ -1,6 +1,6 @@
 "use client";
 
-import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -23,10 +23,11 @@ import GlassCard from "@/components/ui/GlassCard";
 import Fab from "@/components/ui/Fab";
 import BottomNav from "@/components/BottomNav";
 import Button from "@/components/ui/Button";
-import { useHomeExperience, type HomeFeedItem } from "@/hooks/useHomeExperience";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { useHomeData, type FavoriteFeedItem, type HomeFeedItem } from "@/hooks/useHomeData";
 
 type QuickAction = {
-  key: string;
+  id: string;
   label: string;
   description: string;
   ctaLabel: string;
@@ -35,27 +36,36 @@ type QuickAction = {
 
 const quickActions: QuickAction[] = [
   {
-    key: "reflect",
+    id: "reflect",
     label: "Reflect",
     description: "Pause for one minute and jot down a single feeling to clear your mind.",
     ctaLabel: "Start Reflection",
     icon: <NotebookPen className="h-5 w-5" aria-hidden />,
   },
   {
-    key: "breathe",
+    id: "breathe",
     label: "Breathe",
     description: "Follow a calming inhale and exhale pattern to reset your breathing rhythm.",
     ctaLabel: "Begin Breathing",
     icon: <Wind className="h-5 w-5" aria-hidden />,
   },
   {
-    key: "stretch",
+    id: "stretch",
     label: "Stretch",
     description: "Release tension with three gentle stretches designed for your desk.",
     ctaLabel: "Start Stretch",
     icon: <StretchVertical className="h-5 w-5" aria-hidden />,
   },
 ];
+
+const resolveActionHref = (action?: string | null, kind?: string | null) => {
+  if (!action) return `/tracker/${kind ?? "focus"}`;
+  if (action.startsWith("/notes/new")) {
+    const [, query = ""] = action.split("?");
+    return `/notes${query ? `?${query}` : ""}`;
+  }
+  return action;
+};
 
 const fabOptions = [
   { label: "New note", href: "/notes/new", icon: <StickyNote className="h-5 w-5" aria-hidden /> },
@@ -69,12 +79,21 @@ const sheetMotion = {
 };
 
 export default function HomePage() {
+  const supabase = getSupabaseClient();
   const [activeAction, setActiveAction] = useState<QuickAction | null>(null);
   const [fabOpen, setFabOpen] = useState(false);
   const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
 
-  const { userProfile, dailyProgress, feedItems, favorites, loading, error, logQuickAction, logActivityStart, toggleFavorite, refetch } =
-    useHomeExperience();
+  const {
+    userProfile,
+    dailyProgress,
+    feedItems,
+    userFavorites,
+    favoriteItems,
+    loading,
+    error,
+    refetch,
+  } = useHomeData();
 
   useEffect(() => {
     const handleKey = (event: KeyboardEvent) => {
@@ -91,11 +110,27 @@ export default function HomePage() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [activeAction, fabOpen]);
 
+  const favoriteSet = useMemo(() => new Set(userFavorites), [userFavorites]);
+
+  const favoriteDisplay = useMemo<FavoriteFeedItem[]>(() => {
+    if (favoriteItems.length > 0) {
+      return favoriteItems;
+    }
+    return feedItems
+      .filter((item) => favoriteSet.has(item.id))
+      .map((item) => ({
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        kind: item.kind ?? null,
+        created_at: item.created_at ?? null,
+        action: item.action ?? null,
+      }));
+  }, [favoriteItems, feedItems, favoriteSet]);
+
   const displayName = useMemo(() => {
     if (!userProfile) return null;
     if (userProfile.display_name) return userProfile.display_name;
-    if (userProfile.first_name) return userProfile.first_name;
-    if (userProfile.full_name) return userProfile.full_name.split(" ")[0];
     return null;
   }, [userProfile]);
 
@@ -103,9 +138,53 @@ export default function HomePage() {
   const headerSubtitle =
     "Stay grounded with quick pauses, reflections, and mindful movement tailored to your day.";
 
-  const handleQuickActionStart = async (action: QuickAction) => {
+  const logMetricDelta = useCallback(
+    async (delta: { tasks_done?: number; cards_read?: number }) => {
+      if (typeof delta.tasks_done !== "number" && typeof delta.cards_read !== "number") {
+        return;
+      }
+
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session) throw new Error("Please sign in to continue tracking your progress.");
+
+      const today = new Date().toISOString().split("T")[0]?.replace(/-/g, "") ?? "";
+      const { data: existing, error: existingError } = await supabase
+        .from("metrics")
+        .select("tasks_done, cards_read")
+        .eq("user_id", session.user.id)
+        .eq("date_key", today)
+        .maybeSingle();
+      if (existingError) throw existingError;
+
+      const patch: Record<string, string | number> = {
+        user_id: session.user.id,
+        date_key: today,
+        updated_at: new Date().toISOString(),
+      };
+
+      if (typeof delta.tasks_done === "number") {
+        patch.tasks_done = (existing?.tasks_done ?? 0) + delta.tasks_done;
+      }
+      if (typeof delta.cards_read === "number") {
+        patch.cards_read = (existing?.cards_read ?? 0) + delta.cards_read;
+      }
+
+      const { error: upsertError } = await supabase.from("metrics").upsert(patch, {
+        onConflict: "user_id,date_key",
+      });
+      if (upsertError) throw upsertError;
+    },
+    [supabase]
+  );
+
+  const handleQuickActionStart = async (action: QuickAction | null) => {
+    if (!action) return;
     try {
-      await logQuickAction(action.key);
+      await logMetricDelta({ tasks_done: 1 });
       setNotice({ tone: "success", text: `${action.label} logged. Nice work keeping your streak!` });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to log that action right now.";
@@ -115,9 +194,9 @@ export default function HomePage() {
     }
   };
 
-  const handleStartActivity = async (item: HomeFeedItem) => {
+  const handleStartActivity = async () => {
     try {
-      await logActivityStart(item.id);
+      await logMetricDelta({ cards_read: 1 });
       setNotice({ tone: "success", text: "Activity recorded. Keep up the calm momentum." });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to track this activity.";
@@ -127,11 +206,30 @@ export default function HomePage() {
 
   const handleToggleFavorite = async (item: HomeFeedItem) => {
     try {
-      await toggleFavorite(item.id, item);
-      setNotice({
-        tone: "success",
-        text: item.isFavorite ? "Removed from favorites." : "Saved to favorites for quick access.",
-      });
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      if (!session) throw new Error("Please sign in to manage favorites.");
+
+      const isFavorited = favoriteSet.has(item.id);
+      if (isFavorited) {
+        const { error: deleteError } = await supabase
+          .from("favorites")
+          .delete()
+          .eq("user_id", session.user.id)
+          .eq("feed_item_id", item.id);
+        if (deleteError) throw deleteError;
+        setNotice({ tone: "success", text: "Removed from favorites." });
+      } else {
+        const { error: insertError } = await supabase
+          .from("favorites")
+          .insert({ user_id: session.user.id, feed_item_id: item.id, saved_at: new Date().toISOString() });
+        if (insertError) throw insertError;
+        setNotice({ tone: "success", text: "Saved to favorites for quick access." });
+      }
+      await refetch();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to update favorites.";
       setNotice({ tone: "error", text: message });
@@ -211,7 +309,7 @@ export default function HomePage() {
           <div className="flex flex-col gap-3 sm:flex-row">
             {quickActions.map((action) => (
               <QuickActionPill
-                key={action.key}
+                key={action.id}
                 label={action.label}
                 icon={action.icon}
                 onClick={() => setActiveAction(action)}
@@ -230,7 +328,7 @@ export default function HomePage() {
         >
           <div className="flex items-center justify-between">
             <h2 id="focus-heading" className="text-lg font-semibold text-white">
-              Today’s Focus
+              Today&apos;s Focus
             </h2>
             <span className="text-xs uppercase tracking-[0.32em] text-white/55">Mindful picks</span>
           </div>
@@ -241,64 +339,67 @@ export default function HomePage() {
                 Nothing queued yet. Check back later for fresh mindful prompts.
               </div>
             ) : (
-              feedItems.map((item, index) => (
-              <motion.div
-                key={item.id}
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2, ease: "easeOut", delay: 0.14 + index * 0.05 }}
-              >
-                <GlassCard className="flex items-center justify-between gap-4 border-white/30 bg-white/18 px-5 py-4 text-white shadow-[0_24px_60px_-40px_rgba(9,52,115,0.85)] backdrop-blur-lg">
-                  <div className="flex items-start gap-4 text-left">
-                    <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white">
-                      {item.kind === "breathe" ? (
-                        <Wind className="h-6 w-6" aria-hidden />
-                      ) : item.kind === "reflect" ? (
-                        <NotebookPen className="h-6 w-6" aria-hidden />
-                      ) : item.kind === "stretch" ? (
-                        <StretchVertical className="h-6 w-6" aria-hidden />
-                      ) : (
-                        <Sparkles className="h-6 w-6" aria-hidden />
-                      )}
-                    </span>
-                    <div className="space-y-1">
-                      <span className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
-                        {item.kind ?? "Mindful moment"}
-                      </span>
-                      <h3 className="text-base font-semibold tracking-tight text-white">{item.title}</h3>
-                      <p className="text-sm text-white/70 line-clamp-2">{item.content}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-col items-end gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void handleToggleFavorite(item);
-                      }}
-                      className={`inline-flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur-md transition ${
-                        item.isFavorite
-                          ? "border-white/80 bg-white/70 text-rose-500"
-                          : "border-white/30 bg-white/10 text-white/80 hover:border-white/60 hover:bg-white/20"
-                      }`}
-                      aria-pressed={item.isFavorite}
-                      aria-label={item.isFavorite ? "Remove from favorites" : "Save to favorites"}
-                    >
-                      <Heart className="h-4 w-4" aria-hidden fill={item.isFavorite ? "currentColor" : "none"} />
-                    </button>
-                    <ChevronRight className="h-5 w-5 text-white/55" aria-hidden />
-                    <Link
-                      href={item.action ?? `/tracker/${item.kind ?? "focus"}`}
-                      onClick={() => {
-                        void handleStartActivity(item);
-                      }}
-                      className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/75 transition hover:border-white/60 hover:bg-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-                    >
-                      Start
-                    </Link>
-                  </div>
-                </GlassCard>
-              </motion.div>
-              ))
+              feedItems.map((item, index) => {
+                const isFavorite = favoriteSet.has(item.id);
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, y: 18 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2, ease: "easeOut", delay: 0.14 + index * 0.05 }}
+                  >
+                    <GlassCard className="flex items-center justify-between gap-4 border-white/30 bg-white/18 px-5 py-4 text-white shadow-[0_24px_60px_-40px_rgba(9,52,115,0.85)] backdrop-blur-lg">
+                      <div className="flex items-start gap-4 text-left">
+                        <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 text-white">
+                          {item.kind === "breath" ? (
+                            <Wind className="h-6 w-6" aria-hidden />
+                          ) : item.kind === "reflection" ? (
+                            <NotebookPen className="h-6 w-6" aria-hidden />
+                          ) : item.kind === "task" ? (
+                            <StretchVertical className="h-6 w-6" aria-hidden />
+                          ) : (
+                            <Sparkles className="h-6 w-6" aria-hidden />
+                          )}
+                        </span>
+                        <div className="space-y-1">
+                          <span className="text-xs font-semibold uppercase tracking-[0.3em] text-white/60">
+                            {item.kind ?? "Mindful moment"}
+                          </span>
+                          <h3 className="text-base font-semibold tracking-tight text-white">{item.title}</h3>
+                          <p className="text-sm text-white/70 line-clamp-2">{item.content}</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void handleToggleFavorite(item);
+                          }}
+                          className={`inline-flex h-10 w-10 items-center justify-center rounded-full border backdrop-blur-md transition ${
+                            isFavorite
+                              ? "border-white/80 bg-white/70 text-rose-500"
+                              : "border-white/30 bg-white/10 text-white/80 hover:border-white/60 hover:bg-white/20"
+                          }`}
+                          aria-pressed={isFavorite}
+                          aria-label={isFavorite ? "Remove from favorites" : "Save to favorites"}
+                        >
+                          <Heart className="h-4 w-4" aria-hidden fill={isFavorite ? "currentColor" : "none"} />
+                        </button>
+                        <ChevronRight className="h-5 w-5 text-white/55" aria-hidden />
+                        <Link
+                          href={resolveActionHref(item.action, item.kind)}
+                          onClick={() => {
+                            void handleStartActivity();
+                          }}
+                          className="inline-flex items-center justify-center rounded-full border border-white/30 bg-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white/75 transition hover:border-white/60 hover:bg-white/25 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+                        >
+                          Start
+                        </Link>
+                      </div>
+                    </GlassCard>
+                  </motion.div>
+                );
+              })
             )}
           </div>
         </motion.section>
@@ -316,24 +417,16 @@ export default function HomePage() {
               Favorites
             </h2>
           </div>
-          {favorites.length === 0 ? (
+          {favoriteDisplay.length === 0 ? (
             <p className="text-sm text-white/70">Mark an activity with the heart icon to pin it here for later.</p>
           ) : (
             <div className="-mx-6 flex gap-3 overflow-x-auto px-6 pb-1">
-              {favorites.map((favorite) => (
+              {favoriteDisplay.map((favorite) => (
                 <button
                   key={favorite.id}
                   type="button"
                   onClick={() => {
-                    void handleStartActivity({
-                      id: favorite.feed_id,
-                      title: favorite.title,
-                      content: favorite.content,
-                      kind: favorite.kind,
-                      action: null,
-                      created_at: favorite.created_at ?? "",
-                      isFavorite: true,
-                    });
+                    void handleStartActivity();
                   }}
                   className="inline-flex min-w-[10rem] flex-col items-start justify-between gap-2 rounded-2xl border border-white/25 bg-white/12 px-4 py-3 text-left text-white backdrop-blur-md transition hover:-translate-y-0.5 hover:border-white/60 hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
                 >
@@ -361,7 +454,7 @@ export default function HomePage() {
       <AnimatePresence>
         {activeAction ? (
           <motion.div
-            key={activeAction.key}
+            key={activeAction.id}
             className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 px-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}

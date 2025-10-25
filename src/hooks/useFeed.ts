@@ -1,7 +1,7 @@
 "use client";
 
 import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { logger } from "@/utils/logger";
 import { seedFeedItems } from "@/lib/seed";
 import { toDayKey } from "@/utils/dates";
@@ -27,6 +27,7 @@ const PAGE_SIZE = 15;
 const MIN_ITEMS = 15;
 
 async function fetchFeedPage(dayKey: string, cursor?: string | null): Promise<FeedPage> {
+  const supabase = getSupabaseClient();
   let query = supabase
     .from("feed_items")
     .select("id, day_key, kind, title, content, action, created_at, metadata, favorites(id)", {
@@ -59,6 +60,7 @@ async function fetchFeedPage(dayKey: string, cursor?: string | null): Promise<Fe
 }
 
 async function seedFeedIfNeeded(dayKey: string, existingCount: number) {
+  const supabase = getSupabaseClient();
   const missing = MIN_ITEMS - existingCount;
   if (missing <= 0) return;
 
@@ -82,6 +84,7 @@ async function seedFeedIfNeeded(dayKey: string, existingCount: number) {
 }
 
 export function useFeed(dayKey?: string) {
+  const supabase = getSupabaseClient();
   const key = dayKey ?? toDayKey(new Date());
 
   const query = useInfiniteQuery({

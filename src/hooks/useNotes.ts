@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 type NoteRow = {
   id: string;
@@ -85,6 +85,7 @@ export function useNotes() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchNotes = useCallback(async () => {
+    const supabase = getSupabaseClient();
     try {
       setLoading(true);
       setError(null);
@@ -120,6 +121,7 @@ export function useNotes() {
 
   const createNote = useCallback(
     async ({ content, title, mood }: CreateNoteInput) => {
+      const supabase = getSupabaseClient();
       try {
         const sanitizedContent = content.trim();
         if (!sanitizedContent) throw new Error("Content is required");
@@ -168,6 +170,7 @@ export function useNotes() {
   );
 
   const updateNote = useCallback(async (id: string, updates: UpdateNoteInput) => {
+    const supabase = getSupabaseClient();
     try {
       if (!id) throw new Error("Missing note id");
 
@@ -230,6 +233,7 @@ export function useNotes() {
   }, [notes]);
 
   const deleteNote = useCallback(async (id: string) => {
+    const supabase = getSupabaseClient();
     try {
       if (!id) throw new Error("Missing note id");
 

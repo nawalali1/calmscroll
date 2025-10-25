@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { useSession } from "./useSession";
 import type { HabitItem, HabitStatus } from "@/components/home/types";
 import { BellRing, Bike, BookOpen, Footprints, LucideIcon, Moon, Sparkles } from "lucide-react";
@@ -63,6 +63,7 @@ const resolveIcon = (title?: string | null, kind?: string | null): LucideIcon =>
 };
 
 export function useTodayHabits() {
+  const supabase = getSupabaseClient();
   const { session } = useSession();
   const userId = session?.user.id;
 

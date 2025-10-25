@@ -1,0 +1,9 @@
+7c7b954 - Nawal Ali, 22 hours ago : feat: complete backend integration and frontend fixes
+1677fe6 - Nawal Ali, 30 hours ago : fix: auth redirect loops and login flow
+4d53c08 - Nawal Ali, 2 days ago : feat: complete app rebuild with comprehensive fixes
+9242019 - Nawal Ali, 3 days ago : feat: setting page
+51dbbfe - Nawal Ali, 3 days ago : feat: upgrade Notes and Tracker UI
+685eda6 - Nawal Ali, 3 days ago : Update Notes page -> Reflections UX (notes-list-v2) and rename tab label
+487697e - Nawal Ali, 3 days ago : Fix login redirect loop and working session handling
+94ca503 - Nawal Ali, 3 days ago : Initial commit of CalmScroll project
+09ef384 - Nawal Ali, 6 days ago : Initial commit from Create Next App

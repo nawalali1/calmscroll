@@ -1,14 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import GlassyCard from "@/components/GlassyCard";
-import BottomSheet from "@/components/BottomSheet";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import GlassCard from "@/components/ui/GlassCard";
+import Button from "@/components/ui/Button";
+import Input from "@/components/ui/Input";
 import BottomNav from "@/components/BottomNav";
-
-const PROFILE_KEY = "calmscroll_profile";
-const THEME_KEY = "calmscroll_theme";
-const NOTIFICATIONS_KEY = "calmscroll_notifications";
-const REFLECTIONS_KEY = "calmscroll_reflections";
+import { motion } from "framer-motion";
+import { User, Bell, Palette, Download, Trash2, CheckCircle2, Circle } from "lucide-react";
 
 type ThemeChoice = "system" | "light" | "dark";
 
@@ -25,9 +24,9 @@ type NotificationPrefs = {
 };
 
 const DEFAULT_PROFILE: Profile = {
-  firstName: "Calm",
-  lastName: "Seeker",
-  email: "you@example.com",
+  firstName: "",
+  lastName: "",
+  email: "",
 };
 
 const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
@@ -38,10 +37,18 @@ const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
 
 function applyTheme(preference: ThemeChoice) {
   if (typeof window === "undefined") return;
+  
   const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const theme = preference === "system" ? (systemPrefersDark ? "dark" : "light") : preference;
-  document.documentElement.dataset.theme = theme;
-  document.documentElement.classList.toggle("dark", theme === "dark");
+  const shouldBeDark = preference === "dark" || (preference === "system" && systemPrefersDark);
+  
+  // Apply dark class to html element (this is what Tailwind listens to)
+  if (shouldBeDark) {
+    document.documentElement.classList.add("dark");
+  } else {
+    document.documentElement.classList.remove("dark");
+  }
+  
+  console.log("✅ Theme applied:", { preference, shouldBeDark, classes: document.documentElement.className });
 }
 
 export default function SettingsPage() {
@@ -50,291 +57,463 @@ export default function SettingsPage() {
   const [draftProfile, setDraftProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [themeChoice, setThemeChoice] = useState<ThemeChoice>("system");
   const [notificationPrefs, setNotificationPrefs] = useState<NotificationPrefs>(DEFAULT_NOTIFICATIONS);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    async function loadSettings() {
+      const supabase = getSupabaseClient();
+      try {
+        setLoading(true);
 
-    try {
-      const storedProfile = window.localStorage.getItem(PROFILE_KEY);
-      if (storedProfile) {
-        const parsed = JSON.parse(storedProfile) as Profile;
-        setProfile(parsed);
-        setDraftProfile(parsed);
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setLoading(false);
+          return;
+        }
+
+        setUserId(session.user.id);
+
+        const localProfile = window.localStorage.getItem("calmscroll_profile");
+        const localTheme = window.localStorage.getItem("calmscroll_theme");
+        const localNotifications = window.localStorage.getItem("calmscroll_notifications");
+
+        let shouldMigrate = false;
+        const migratedData: Record<string, unknown> = {};
+
+        if (localProfile) {
+          const parsed = JSON.parse(localProfile);
+          migratedData.first_name = parsed.firstName;
+          migratedData.last_name = parsed.lastName;
+          migratedData.email = parsed.email;
+          shouldMigrate = true;
+        }
+
+        if (localTheme) {
+          migratedData.theme = localTheme;
+          shouldMigrate = true;
+        }
+
+        if (localNotifications) {
+          const parsed = JSON.parse(localNotifications);
+          migratedData.daily_reminder = parsed.dailyReminder;
+          migratedData.streak_alerts = parsed.streakAlerts;
+          migratedData.weekly_summary = parsed.weeklySummary;
+          shouldMigrate = true;
+        }
+
+        const { data: profileData, error } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (error && error.code !== "PGRST116") {
+          console.error("Error loading profile:", error);
+        }
+
+        if (shouldMigrate && !profileData) {
+          await supabase.from("profiles").insert({ id: session.user.id, ...migratedData });
+          window.localStorage.removeItem("calmscroll_profile");
+          window.localStorage.removeItem("calmscroll_theme");
+          window.localStorage.removeItem("calmscroll_notifications");
+        }
+
+        const data = profileData || migratedData;
+
+        const loadedProfile: Profile = {
+          firstName: data.first_name || session.user.email?.split("@")[0] || "",
+          lastName: data.last_name || "",
+          email: data.email || session.user.email || "",
+        };
+
+        const loadedNotifications: NotificationPrefs = {
+          dailyReminder: data.daily_reminder ?? true,
+          streakAlerts: data.streak_alerts ?? true,
+          weeklySummary: data.weekly_summary ?? false,
+        };
+
+        const loadedTheme: ThemeChoice = (data.theme as ThemeChoice) || "system";
+
+        setProfile(loadedProfile);
+        setDraftProfile(loadedProfile);
+        setNotificationPrefs(loadedNotifications);
+        setThemeChoice(loadedTheme);
+        applyTheme(loadedTheme);
+      } catch (err) {
+        console.error("Error in loadSettings:", err);
+      } finally {
+        setLoading(false);
       }
-    } catch {
-      // ignore
     }
 
-    try {
-      const storedNotifications = window.localStorage.getItem(NOTIFICATIONS_KEY);
-      if (storedNotifications) {
-        setNotificationPrefs(JSON.parse(storedNotifications) as NotificationPrefs);
-      }
-    } catch {
-      // ignore
-    }
-
-    const storedTheme = window.localStorage.getItem(THEME_KEY) as ThemeChoice | null;
-    const initialTheme: ThemeChoice = storedTheme ?? "system";
-    setThemeChoice(initialTheme);
-    applyTheme(initialTheme);
-
-    return () => undefined;
+    loadSettings();
   }, []);
 
-  const toggleNotification = (key: keyof NotificationPrefs) => {
-    setNotificationPrefs((prev) => {
-      const next = { ...prev, [key]: !prev[key] };
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(NOTIFICATIONS_KEY, JSON.stringify(next));
-      }
-      return next;
-    });
+  const saveProfile = async () => {
+    if (!userId) return;
+    const supabase = getSupabaseClient();
+
+    try {
+      setSaveStatus("Saving...");
+
+      const { error } = await supabase.from("profiles").upsert({
+        id: userId,
+        first_name: draftProfile.firstName,
+        last_name: draftProfile.lastName,
+        email: draftProfile.email,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+
+      setProfile(draftProfile);
+      setEditingProfile(false);
+      setSaveStatus("Saved!");
+      setTimeout(() => setSaveStatus(null), 2000);
+    } catch (error) {
+      console.error("Error saving profile:", error);
+      setSaveStatus("Error saving");
+      setTimeout(() => setSaveStatus(null), 3000);
+    }
   };
 
-  const updateTheme = (value: ThemeChoice) => {
+  const toggleNotification = async (key: keyof NotificationPrefs) => {
+    if (!userId) return;
+    const supabase = getSupabaseClient();
+
+    const newValue = !notificationPrefs[key];
+    const dbKey = key === "dailyReminder" ? "daily_reminder" : key === "streakAlerts" ? "streak_alerts" : "weekly_summary";
+
+    try {
+      setNotificationPrefs((prev) => ({ ...prev, [key]: newValue }));
+
+      const { error } = await supabase.from("profiles").upsert({
+        id: userId,
+        [dbKey]: newValue,
+        updated_at: new Date().toISOString(),
+      });
+
+      if (error) throw error;
+      
+      console.log(`✅ ${key} updated to:`, newValue);
+    } catch (error) {
+      console.error("Error updating notification:", error);
+      setNotificationPrefs((prev) => ({ ...prev, [key]: !newValue }));
+    }
+  };
+
+  const updateTheme = async (value: ThemeChoice) => {
+    if (!userId) return;
+    const supabase = getSupabaseClient();
+
+    console.log("🎨 Changing theme to:", value);
     setThemeChoice(value);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(THEME_KEY, value);
-    }
     applyTheme(value);
-  };
 
-  const handleProfileSave = () => {
-    setProfile(draftProfile);
-    if (typeof window !== "undefined") {
-      window.localStorage.setItem(PROFILE_KEY, JSON.stringify(draftProfile));
-    }
-    setEditingProfile(false);
-  };
+    try {
+      const { error } = await supabase.from("profiles").upsert({
+        id: userId,
+        theme: value,
+        updated_at: new Date().toISOString(),
+      });
 
-  const clearLocalCache = () => {
-    if (typeof window === "undefined") return;
-    if (!window.confirm("Clear local CalmScroll cache?")) return;
-    window.localStorage.removeItem(PROFILE_KEY);
-    window.localStorage.removeItem(NOTIFICATIONS_KEY);
-    window.localStorage.removeItem(REFLECTIONS_KEY);
-    setProfile(DEFAULT_PROFILE);
-    setDraftProfile(DEFAULT_PROFILE);
-    setNotificationPrefs(DEFAULT_NOTIFICATIONS);
-  };
-
-  const deleteAccount = () => {
-    if (typeof window === "undefined") return;
-    if (window.confirm("Delete your CalmScroll data? This cannot be undone.")) {
-      window.alert("Account deletion is not available in this preview build.");
+      if (error) throw error;
+      
+      console.log("✅ Theme saved to database:", value);
+    } catch (error) {
+      console.error("Error updating theme:", error);
     }
   };
 
-  return (
-    <>
-      <div className="page-shell">
-        <div className="screen">
-          <header className="bg-calm-gradient px-6 pt-16 pb-10 text-slate-900 dark:text-white">
-            <h1 className="text-3xl font-semibold tracking-tight text-center">Settings</h1>
-            <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-300">
-              Tune your CalmScroll experience.
-            </p>
-          </header>
+  const exportData = () => {
+    const data = {
+      profile,
+      theme: themeChoice,
+      notifications: notificationPrefs,
+      exportedAt: new Date().toISOString(),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `calmscroll-settings-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-          <main className="flex-1 overflow-y-auto px-6 pb-28">
-            <div className="space-y-6 pt-6">
-              <GlassyCard role="group" aria-labelledby="settings-profile" className="flex items-center justify-between gap-4 p-6">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-[#A5C7FF] via-[#D0B8FF] to-[#FFB3D1] text-slate-800 shadow">
-                    <span className="text-sm font-semibold">
-                      {profile.firstName?.[0]}
-                      {profile.lastName?.[0]}
-                    </span>
-                  </div>
-                  <div>
-                    <h2
-                      id="settings-profile"
-                      className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400"
-                    >
-                      Profile
-                    </h2>
-                    <p className="mt-2 text-lg font-semibold text-slate-900 dark:text-white">
-                      {profile.firstName} {profile.lastName}
-                    </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-300">{profile.email}</p>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setDraftProfile(profile);
-                    setEditingProfile(true);
-                  }}
-                  className="rounded-full border border-white/40 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-white/70 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4C6EF5] dark:border-white/10 dark:text-white dark:hover:bg-white/10"
-                >
-                  Edit Profile
-                </button>
-              </GlassyCard>
+  const deleteAccount = async () => {
+    if (!userId) return;
+    const supabase = getSupabaseClient();
 
-              <GlassyCard role="group" aria-labelledby="settings-notifications" className="p-6">
-                <h2 id="settings-notifications" className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-                  Notifications
-                </h2>
-                <div className="mt-4 space-y-3">
-                  {([
-                    ["dailyReminder", "Daily reminder", "Gentle nudge to check-in each morning."],
-                    ["streakAlerts", "Streak alerts", "Celebrate milestones when you stay consistent."],
-                    ["weeklySummary", "Weekly summary", "Friday roundup of highlights and insights."],
-                  ] as const).map(([key, label, helper]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      role="switch"
-                      aria-checked={notificationPrefs[key]}
-                      onClick={() => toggleNotification(key)}
-                      className={`flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4C6EF5] ${
-                        notificationPrefs[key]
-                          ? "border-transparent bg-gradient-to-br from-[#A5C7FF]/40 via-[#D0B8FF]/40 to-[#FFB3D1]/40"
-                          : "border-white/40 bg-[rgba(255,255,255,0.55)] dark:border-white/10 dark:bg-[rgba(20,20,20,0.5)]"
-                      }`}
-                    >
-                      <span>
-                        <span className="text-sm font-semibold text-slate-900 dark:text-white">{label}</span>
-                        <span className="mt-1 block text-xs text-slate-500 dark:text-slate-300">{helper}</span>
-                      </span>
-                      <span
-                        className={`flex h-6 w-11 items-center rounded-full px-1 transition ${
-                          notificationPrefs[key] ? "bg-indigo-500" : "bg-slate-300 dark:bg-slate-700"
-                        }`}
-                      >
-                        <span
-                          className={`h-4 w-4 rounded-full bg-white shadow transition ${
-                            notificationPrefs[key] ? "translate-x-5" : "translate-x-0"
-                          }`}
-                        />
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </GlassyCard>
+    const confirmed = window.confirm("Are you sure you want to delete your account? This action cannot be undone.");
 
-              <GlassyCard role="group" aria-labelledby="settings-theme" className="p-6">
-                <h2 id="settings-theme" className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-                  Theme
-                </h2>
-                <div className="mt-4 space-y-3">
-                  {(["system", "light", "dark"] as ThemeChoice[]).map((option) => (
-                    <label
-                      key={option}
-                      className={`flex items-center justify-between rounded-2xl border px-4 py-3 text-sm font-semibold transition focus-within:outline focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-indigo-400 ${
-                        themeChoice === option
-                          ? "border-indigo-300 bg-indigo-500/10 text-indigo-600 dark:border-indigo-500 dark:text-indigo-300"
-                          : "border-white/40 bg-white/40 text-slate-600 hover:bg-white/60 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
-                      }`}
-                    >
-                      <span className="capitalize">{option}</span>
-                      <input
-                        type="radio"
-                        name="theme"
-                        value={option}
-                        checked={themeChoice === option}
-                        onChange={() => updateTheme(option)}
-                        className="h-5 w-5"
-                      />
-                    </label>
-                  ))}
-                </div>
-              </GlassyCard>
+    if (!confirmed) return;
 
-              <GlassyCard role="group" aria-labelledby="settings-privacy" className="p-6">
-                <h2 id="settings-privacy" className="text-sm font-medium uppercase tracking-[0.3em] text-slate-500 dark:text-slate-400">
-                  Data &amp; Privacy
-                </h2>
-                <div className="mt-4 space-y-3">
-                  <button
-                    type="button"
-                    onClick={() => window.alert("Export coming soon")}
-                    className="w-full rounded-full border border-white/40 bg-[rgba(255,255,255,0.6)] px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#4C6EF5] dark:border-white/15 dark:bg-[rgba(20,20,20,0.5)] dark:text-white dark:hover:bg-white/10"
-                  >
-                    Export Data
-                  </button>
-                  <button
-                    type="button"
-                    onClick={clearLocalCache}
-                    className="w-full rounded-full border border-rose-400 bg-[rgba(255,255,255,0.6)] px-4 py-3 text-sm font-semibold text-rose-500 transition hover:bg-rose-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400 dark:border-rose-500/60 dark:bg-[rgba(20,20,20,0.5)] dark:text-rose-300 dark:hover:bg-rose-500/10"
-                  >
-                    Clear Local Cache
-                  </button>
-                  <button
-                    type="button"
-                    onClick={deleteAccount}
-                    className="text-sm font-semibold text-rose-500 underline hover:text-rose-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400"
-                  >
-                    Delete Account
-                  </button>
-                </div>
-              </GlassyCard>
+    try {
+      await supabase.from("profiles").update({ deleted_at: new Date().toISOString() }).eq("id", userId);
+      await supabase.auth.signOut();
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error deleting account:", error);
+      alert("Error deleting account. Please try again.");
+    }
+  };
 
-              <footer className="pb-12 text-xs text-slate-500 dark:text-slate-400">
-                <p className="text-center">CalmScroll v0.1</p>
-                <div className="mt-2 flex justify-center gap-4">
-                  <a href="/privacy" className="underline">
-                    Privacy Policy
-                  </a>
-                  <a href="/terms" className="underline">
-                    Terms
-                  </a>
-                </div>
-              </footer>
-            </div>
-          </main>
-          <BottomNav />
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(160deg,#0B3B64_0%,#5282FF_52%,#FFB3C7_100%)] dark:bg-[linear-gradient(160deg,#0f172a_0%,#1e293b_52%,#334155_100%)]">
+        <div className="flex flex-col items-center gap-4 text-white">
+          <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+          <p className="text-sm font-medium uppercase tracking-[0.28em] text-white/80">Loading settings…</p>
         </div>
       </div>
+    );
+  }
 
-      <BottomSheet
-        open={editingProfile}
-        onClose={() => setEditingProfile(false)}
-        title="Edit Profile"
+  return (
+    <main className="relative min-h-svh bg-[linear-gradient(160deg,#0B3B64_0%,#5282FF_52%,#FFB3C7_100%)] dark:bg-[linear-gradient(160deg,#0f172a_0%,#1e293b_52%,#334155_100%)] pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] text-white transition-colors duration-300">
+      <motion.header
+        initial={{ opacity: 0, y: -12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.18 }}
+        className="px-6 pb-8 pt-[calc(env(safe-area-inset-top,0px)+1.5rem)]"
       >
-        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-          First Name
-          <input
-            value={draftProfile.firstName}
-            onChange={(event) => setDraftProfile((prev) => ({ ...prev, firstName: event.currentTarget.value }))}
-            className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
-          />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-          Last Name
-          <input
-            value={draftProfile.lastName}
-            onChange={(event) => setDraftProfile((prev) => ({ ...prev, lastName: event.currentTarget.value }))}
-            className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
-          />
-        </label>
-        <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
-          Email
-          <input
-            type="email"
-            value={draftProfile.email}
-            onChange={(event) => setDraftProfile((prev) => ({ ...prev, email: event.currentTarget.value }))}
-            className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
-          />
-        </label>
-        <div className="flex items-center justify-end gap-3 pt-2">
-          <button
-            type="button"
-            onClick={() => setEditingProfile(false)}
-            className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400 dark:border-white/20 dark:text-slate-200 dark:hover:bg-white/10"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={handleProfileSave}
-            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400 dark:bg-indigo-500"
-          >
-            Save
-          </button>
-        </div>
-      </BottomSheet>
-    </>
+        <p className="text-xs font-medium uppercase tracking-[0.32em] text-white/70">CalmScroll</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Settings</h1>
+        <p className="mt-1 text-sm text-white/75">Manage your preferences and account</p>
+      </motion.header>
+
+      {saveStatus && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mx-auto mb-4 w-full max-w-xl px-6"
+        >
+          <div className={`flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm font-medium backdrop-blur-md ${
+            saveStatus === "Saved!" 
+              ? "border-emerald-200/40 bg-emerald-200/20 text-emerald-50" 
+              : saveStatus === "Saving..." 
+              ? "border-blue-200/40 bg-blue-200/20 text-blue-50"
+              : "border-rose-200/40 bg-rose-200/20 text-rose-50"
+          }`}>
+            {saveStatus === "Saved!" && <CheckCircle2 className="h-4 w-4" />}
+            {saveStatus}
+          </div>
+        </motion.div>
+      )}
+
+      <div className="mx-auto w-full max-w-xl space-y-4 px-6">
+        {/* Profile Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+        >
+          <GlassCard className="p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
+                  <User className="h-5 w-5 text-white" />
+                </div>
+                <h2 className="text-lg font-semibold text-white">Profile</h2>
+              </div>
+              <button
+                onClick={() => {
+                  if (editingProfile) setDraftProfile(profile);
+                  setEditingProfile(!editingProfile);
+                }}
+                className="text-sm font-medium text-white/80 hover:text-white transition"
+              >
+                {editingProfile ? "Cancel" : "Edit"}
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {editingProfile ? (
+                <>
+                  <Input
+                    label="First Name"
+                    value={draftProfile.firstName}
+                    onChange={(e) => setDraftProfile({ ...draftProfile, firstName: e.target.value })}
+                    className="bg-white/20 text-white placeholder:text-white/50"
+                    labelClassName="text-white/90"
+                  />
+                  <Input
+                    label="Last Name"
+                    value={draftProfile.lastName}
+                    onChange={(e) => setDraftProfile({ ...draftProfile, lastName: e.target.value })}
+                    className="bg-white/20 text-white placeholder:text-white/50"
+                    labelClassName="text-white/90"
+                  />
+                  <Input
+                    label="Email"
+                    type="email"
+                    value={draftProfile.email}
+                    onChange={(e) => setDraftProfile({ ...draftProfile, email: e.target.value })}
+                    className="bg-white/20 text-white placeholder:text-white/50"
+                    labelClassName="text-white/90"
+                  />
+                  <Button onClick={saveProfile} className="w-full rounded-full bg-white/90 text-slate-900 hover:bg-white">
+                    Save Changes
+                  </Button>
+                </>
+              ) : (
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/60">Name</p>
+                    <p className="mt-1 text-white">{profile.firstName} {profile.lastName}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/60">Email</p>
+                    <p className="mt-1 text-white">{profile.email}</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        {/* Theme Section - FIXED */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.15 }}
+        >
+          <GlassCard className="p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
+                <Palette className="h-5 w-5 text-white" />
+              </div>
+              <h2 className="text-lg font-semibold text-white">Appearance</h2>
+            </div>
+
+            <div className="space-y-3">
+              {(["system", "light", "dark"] as ThemeChoice[]).map((option) => (
+                <button
+                  key={option}
+                  onClick={() => updateTheme(option)}
+                  className={`flex w-full items-center gap-4 rounded-xl px-4 py-3.5 text-left transition-all ${
+                    themeChoice === option
+                      ? "bg-white/25 border-2 border-white/60 shadow-lg"
+                      : "bg-white/10 border-2 border-transparent hover:bg-white/15 hover:border-white/30"
+                  }`}
+                >
+                  <div className="flex h-6 w-6 items-center justify-center">
+                    {themeChoice === option ? (
+                      <CheckCircle2 className="h-6 w-6 text-white" />
+                    ) : (
+                      <Circle className="h-6 w-6 text-white/40" />
+                    )}
+                  </div>
+                  <span className="flex-1 capitalize font-medium text-white">{option}</span>
+                </button>
+              ))}
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        {/* Notifications Section - FIXED */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+        >
+          <GlassCard className="p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/15">
+                <Bell className="h-5 w-5 text-white" />
+              </div>
+              <h2 className="text-lg font-semibold text-white">Notifications</h2>
+            </div>
+
+            <div className="space-y-4">
+              <button
+                onClick={() => toggleNotification("dailyReminder")}
+                className="flex w-full items-start justify-between gap-4 rounded-xl bg-white/5 px-4 py-3 text-left transition hover:bg-white/10"
+              >
+                <div className="flex-1">
+                  <p className="font-medium text-white">Daily Reminder</p>
+                  <p className="text-sm text-white/70 mt-0.5">Get a gentle nudge each day</p>
+                </div>
+                <div className="flex items-center">
+                  {notificationPrefs.dailyReminder ? (
+                    <CheckCircle2 className="h-6 w-6 text-emerald-300" />
+                  ) : (
+                    <Circle className="h-6 w-6 text-white/40" />
+                  )}
+                </div>
+              </button>
+
+              <button
+                onClick={() => toggleNotification("streakAlerts")}
+                className="flex w-full items-start justify-between gap-4 rounded-xl bg-white/5 px-4 py-3 text-left transition hover:bg-white/10"
+              >
+                <div className="flex-1">
+                  <p className="font-medium text-white">Streak Alerts</p>
+                  <p className="text-sm text-white/70 mt-0.5">Celebrate your mindfulness streak</p>
+                </div>
+                <div className="flex items-center">
+                  {notificationPrefs.streakAlerts ? (
+                    <CheckCircle2 className="h-6 w-6 text-emerald-300" />
+                  ) : (
+                    <Circle className="h-6 w-6 text-white/40" />
+                  )}
+                </div>
+              </button>
+
+              <button
+                onClick={() => toggleNotification("weeklySummary")}
+                className="flex w-full items-start justify-between gap-4 rounded-xl bg-white/5 px-4 py-3 text-left transition hover:bg-white/10"
+              >
+                <div className="flex-1">
+                  <p className="font-medium text-white">Weekly Summary</p>
+                  <p className="text-sm text-white/70 mt-0.5">Review your week&apos;s progress</p>
+                </div>
+                <div className="flex items-center">
+                  {notificationPrefs.weeklySummary ? (
+                    <CheckCircle2 className="h-6 w-6 text-emerald-300" />
+                  ) : (
+                    <Circle className="h-6 w-6 text-white/40" />
+                  )}
+                </div>
+              </button>
+            </div>
+          </GlassCard>
+        </motion.div>
+
+        {/* Data & Privacy Section */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.25 }}
+        >
+          <GlassCard className="p-6">
+            <h2 className="mb-5 text-lg font-semibold text-white">Data & Privacy</h2>
+
+            <div className="space-y-3">
+              <button
+                onClick={exportData}
+                className="flex w-full items-center justify-between rounded-xl border border-white/30 bg-white/10 px-4 py-3 text-left text-white transition hover:bg-white/20 hover:border-white/50"
+              >
+                <span className="font-medium">Export My Data</span>
+                <Download className="h-5 w-5 text-white/70" />
+              </button>
+
+              <button
+                onClick={deleteAccount}
+                className="flex w-full items-center justify-between rounded-xl border border-rose-300/40 bg-rose-500/20 px-4 py-3 text-left text-rose-100 transition hover:bg-rose-500/30 hover:border-rose-300/60"
+              >
+                <span className="font-medium">Delete Account</span>
+                <Trash2 className="h-5 w-5 text-rose-200/70" />
+              </button>
+            </div>
+          </GlassCard>
+        </motion.div>
+      </div>
+
+      <BottomNav />
+    </main>
   );
 }

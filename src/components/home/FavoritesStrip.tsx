@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Heart } from "lucide-react";
 import Skeleton from "@/components/ui/Skeleton";
-import { supabase } from "@/lib/supabaseClient";
+import { getSupabaseClient } from "@/lib/supabase/client";
 import { useSession } from "@/hooks/useSession";
 import { useToast } from "@/components/ui/Toast";
 
@@ -20,6 +20,7 @@ type FavoriteItem = {
 };
 
 async function fetchFavorites(userId: string): Promise<FavoriteItem[]> {
+  const supabase = getSupabaseClient();
   const { data, error } = await supabase
     .from("favorites")
     .select("id, feed_items:feed_items(id, title, kind, content)")

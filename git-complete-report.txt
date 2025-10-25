@@ -1,0 +1,39 @@
+=== GIT COMMIT HISTORY ===
+7c7b954 feat: complete backend integration and frontend fixes
+1677fe6 fix: auth redirect loops and login flow
+4d53c08 feat: complete app rebuild with comprehensive fixes
+9242019 feat: setting page
+51dbbfe feat: upgrade Notes and Tracker UI
+685eda6 Update Notes page -> Reflections UX (notes-list-v2) and rename tab label
+487697e Fix login redirect loop and working session handling
+94ca503 Initial commit of CalmScroll project
+09ef384 Initial commit from Create Next App
+
+=== CURRENT BRANCHES ===
+* main
+  remotes/origin/main
+
+=== RECENT CHANGES ===
+commit 7c7b9541265da2526583cac7425db4aa02744b80
+Author: Nawal Ali <nawalalixo02@hotmail.com>
+Date:   Fri Oct 24 22:57:25 2025 +0100
+
+    feat: complete backend integration and frontend fixes
+    
+    - Added mood_score column to metrics table via database migration
+    - Fixed tracker page to save mood selections to backend
+    - Created useHomeData hook for real user progress tracking
+    - Connected home page to use real user data from database
+    - Notes page fully functional with backend integration
+    - All pages now use real Supabase data instead of mock data
+    - Added proper error handling and loading states
+    - Backend and frontend now fully synchronized
+
+ src/app/(app)/home/page.tsx    | 221 ++++++++++++++++++++-------
+ src/app/notes/page.tsx         |  21 ++-
+ src/app/page.tsx               |  22 ++-
+ src/app/tracker/page.tsx       |  45 +++++-
+ src/hooks/useHomeData.ts       |  69 +++++++++
+ src/hooks/useHomeExperience.ts | 330 +++++++++++++++++++++++++++++++++++++++++
+ src/hooks/useNotes.ts          | 125 +++++++++++++---
+ 7 files changed, 740 insertions(+), 93 deletions(-)

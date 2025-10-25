@@ -1,105 +1,99 @@
-.
-├── .env.local
-├── .gitignore
-├── README.md
-├── RLS_DEV_POLICIES.sql
-├── eslint.config.mjs
-├── next-env.d.ts
-├── next.config.ts
-├── package-lock.json
-├── package.json
-├── postcss.config.mjs
-├── project-tree.txt
-├── public
-│   ├── file.svg
-│   ├── globe.svg
-│   ├── next.svg
-│   ├── vercel.svg
-│   └── window.svg
-├── src
-│   ├── app
-│   │   ├── (app)
-│   │   │   └── home
-│   │   ├── (auth)
-│   │   │   └── login
-│   │   ├── auth
-│   │   │   ├── callback
-│   │   │   └── page.tsx
-│   │   ├── favicon.ico
-│   │   ├── globals.css
-│   │   ├── layout.tsx
-│   │   ├── notes
-│   │   │   └── page.tsx
-│   │   ├── page.tsx
-│   │   ├── settings
-│   │   │   └── page.tsx
-│   │   └── tracker
-│   │       └── page.tsx
-│   ├── components
-│   │   ├── AppShell.tsx
-│   │   ├── TabBar.tsx
-│   │   ├── home
-│   │   │   ├── BreatheModal.tsx
-│   │   │   ├── FabCluster.tsx
-│   │   │   ├── FavoritesStrip.tsx
-│   │   │   ├── FeatureTiles.tsx
-│   │   │   ├── FeedPreview.tsx
-│   │   │   ├── GreetingCard.tsx
-│   │   │   ├── GreetingPulse.tsx
-│   │   │   ├── GreetingToast.tsx
-│   │   │   ├── HabitsToday.tsx
-│   │   │   ├── HeroHeader.tsx
-│   │   │   ├── KpiChips.tsx
-│   │   │   ├── MoodLog.tsx
-│   │   │   ├── MoodSelector.tsx
-│   │   │   ├── ProgramCards.tsx
-│   │   │   ├── ProgressRing.tsx
-│   │   │   ├── ProgressSummary.tsx
-│   │   │   ├── QuickActions.tsx
-│   │   │   ├── TrackerHero.tsx
-│   │   │   ├── WaveDivider.tsx
-│   │   │   └── types.ts
-│   │   ├── providers
-│   │   │   ├── AppProviders.tsx
-│   │   │   └── ThemeProvider.tsx
-│   │   └── ui
-│   │       ├── AuthCard.tsx
-│   │       ├── BottomNav.tsx
-│   │       ├── Button.tsx
-│   │       ├── Card.tsx
-│   │       ├── Chip.tsx
-│   │       ├── Dialog.tsx
-│   │       ├── Fab.tsx
-│   │       ├── GlassCard.tsx
-│   │       ├── GradientHeader.tsx
-│   │       ├── IconButton.tsx
-│   │       ├── Input.tsx
-│   │       ├── ProgressRing.tsx
-│   │       ├── QuickActionPill.tsx
-│   │       ├── Sheet.tsx
-│   │       ├── Skeleton.tsx
-│   │       ├── Tabs.tsx
-│   │       └── Toast.tsx
-│   ├── hooks
-│   │   ├── useDailyMetrics.ts
-│   │   ├── useFeed.ts
-│   │   ├── useSession.ts
-│   │   ├── useTodayFeed.ts
-│   │   └── useTodayHabits.ts
-│   ├── lib
-│   │   ├── exportData.ts
-│   │   ├── metrics.ts
-│   │   ├── motion.ts
-│   │   ├── offlineQueue.ts
-│   │   ├── seed.ts
-│   │   └── supabaseClient.ts
-│   ├── styles
-│   │   └── tokens.css
-│   └── utils
-│       ├── dates.ts
-│       ├── json.ts
-│       ├── logger.ts
-│       └── name.ts
-└── tsconfig.json
-
-21 directories, 82 files
+./.env.local
+./.gitignore
+./README.md
+./RLS_DEV_POLICIES.sql
+./eslint.config.mjs
+./extension/background.js
+./extension/icon128.png
+./extension/manifest.json
+./extension/options.html
+./extension/options.js
+./next-env.d.ts
+./next.config.ts
+./package-lock.json
+./package.json
+./postcss.config.mjs
+./project-tree.txt
+./public/file.svg
+./public/globe.svg
+./public/next.svg
+./public/vercel.svg
+./public/window.svg
+./repo-audit.txt
+./src/app/(app)/home/page.tsx
+./src/app/(auth)/login/page.tsx
+./src/app/auth/_callback_disabled/route.ts
+./src/app/auth/page.tsx
+./src/app/favicon.ico
+./src/app/globals.css
+./src/app/intentions/page.tsx
+./src/app/layout.tsx
+./src/app/notes/page.tsx
+./src/app/page.tsx
+./src/app/settings/page.tsx
+./src/app/tracker/page.tsx
+./src/components/AppShell.tsx
+./src/components/BottomNav.tsx
+./src/components/BottomSheet.tsx
+./src/components/GlassyCard.tsx
+./src/components/IconButton.tsx
+./src/components/TabBar.tsx
+./src/components/home/BreatheModal.tsx
+./src/components/home/FabCluster.tsx
+./src/components/home/FavoritesStrip.tsx
+./src/components/home/FeatureTiles.tsx
+./src/components/home/FeedPreview.tsx
+./src/components/home/GreetingCard.tsx
+./src/components/home/GreetingPulse.tsx
+./src/components/home/GreetingToast.tsx
+./src/components/home/HabitsToday.tsx
+./src/components/home/HeroHeader.tsx
+./src/components/home/KpiChips.tsx
+./src/components/home/MoodLog.tsx
+./src/components/home/MoodSelector.tsx
+./src/components/home/ProgramCards.tsx
+./src/components/home/ProgressRing.tsx
+./src/components/home/ProgressSummary.tsx
+./src/components/home/QuickActions.tsx
+./src/components/home/TrackerHero.tsx
+./src/components/home/WaveDivider.tsx
+./src/components/home/types.ts
+./src/components/providers/AppProviders.tsx
+./src/components/providers/AuthGate.tsx
+./src/components/providers/ThemeProvider.tsx
+./src/components/ui/AuthCard.tsx
+./src/components/ui/Button.tsx
+./src/components/ui/Card.tsx
+./src/components/ui/Chip.tsx
+./src/components/ui/Dialog.tsx
+./src/components/ui/Fab.tsx
+./src/components/ui/GlassCard.tsx
+./src/components/ui/GradientHeader.tsx
+./src/components/ui/IconButton.tsx
+./src/components/ui/Input.tsx
+./src/components/ui/ProgressRing.tsx
+./src/components/ui/QuickActionPill.tsx
+./src/components/ui/Sheet.tsx
+./src/components/ui/Skeleton.tsx
+./src/components/ui/Tabs.tsx
+./src/components/ui/Toast.tsx
+./src/hooks/useDailyMetrics.ts
+./src/hooks/useFeed.ts
+./src/hooks/useHomeData.ts
+./src/hooks/useNotes.ts
+./src/hooks/useSession.ts
+./src/hooks/useTodayFeed.ts
+./src/hooks/useTodayHabits.ts
+./src/lib/exportData.ts
+./src/lib/metrics.ts
+./src/lib/motion.ts
+./src/lib/notifications.ts
+./src/lib/offlineQueue.ts
+./src/lib/seed.ts
+./src/lib/supabaseClient.ts
+./src/styles/tokens.css
+./src/utils/dates.ts
+./src/utils/json.ts
+./src/utils/logger.ts
+./src/utils/name.ts
+./tsconfig.json
