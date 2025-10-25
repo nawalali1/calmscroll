@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { NotebookPen, Sparkles, StretchVertical, Wind } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { QuickActionPill } from "@/components/ui/QuickActionPill";
 import GlassyCard from "@/components/GlassyCard";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +10,9 @@ import { Fab } from "@/components/ui/Fab";
 import BottomSheet from "@/components/BottomSheet";
 import BottomNav from "@/components/BottomNav";
 import { useHomeData } from "@/hooks/useHomeData";
+import { QUICK_ACTIONS, FOCUS_CARDS, DEFAULT_FAVORITES } from "@/config/content";
+import { GREETING_TIME_RANGES } from "@/config/timings";
+import { METRICS, PROGRESS_CONFIG } from "@/config/ui";
 
 type QuickActionId = "breathe" | "reflect" | "stretch";
 
@@ -22,59 +25,6 @@ type QuickAction = {
   icon: ReactNode;
 };
 
-const QUICK_ACTIONS: QuickAction[] = [
-  {
-    id: "breathe",
-    label: "Breathe",
-    description: "Reset your mind with a guided breathing session.",
-    prompt: "Inhale slowly for four counts, exhale for six. What shifts for you after three rounds?",
-    actionLabel: "Begin Breathing",
-    icon: <Wind className="h-5 w-5" aria-hidden />,
-  },
-  {
-    id: "reflect",
-    label: "Reflect",
-    description: "Take a moment to check in with yourself.",
-    prompt: "Name one feeling you want to carry forward and one you can release.",
-    actionLabel: "Start Reflection",
-    icon: <NotebookPen className="h-5 w-5" aria-hidden />,
-  },
-  {
-    id: "stretch",
-    label: "Stretch",
-    description: "Release tension with gentle movement prompts.",
-    prompt: "Roll your shoulders back and stretch tall. Where do you notice space opening?",
-    actionLabel: "Start Stretch",
-    icon: <StretchVertical className="h-5 w-5" aria-hidden />,
-  },
-];
-
-const FOCUS_CARDS = [
-  {
-    id: "focus-breathe",
-    title: "1-Minute Breathe",
-    description: "Reset your mind with a guided breathing session.",
-    accent: "from-[#86B7FF] to-[#B39CFF]",
-    icon: Wind,
-  },
-  {
-    id: "focus-reflection",
-    title: "Guided Reflection",
-    description: "Take a moment to check in with yourself.",
-    accent: "from-[#BF9FFF] to-[#FF9ACB]",
-    icon: NotebookPen,
-  },
-  {
-    id: "focus-stretch",
-    title: "Stretch Break",
-    description: "Release tension with gentle movement prompts.",
-    accent: "from-[#8DD2FF] to-[#A78BFA]",
-    icon: StretchVertical,
-  },
-] as const;
-
-const FAVORITES = ["Morning Journal", "Gratitude List", "Calm Playlist", "Reset Breath", "Mini Stretch"] as const;
-
 export default function HomePage() {
   const router = useRouter();
   const [activeAction, setActiveAction] = useState<QuickAction | null>(null);
@@ -82,9 +32,11 @@ export default function HomePage() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const { userProfile, dailyProgress, loading } = useHomeData();
   const userDisplayName = userProfile?.display_name?.trim() || "Friend";
-  const progressValue = Math.round(Math.max(0, Math.min(100, dailyProgress || 0)));
-  const progressCircumference = Math.PI * 100;
-  const progressOffset = progressCircumference * (1 - progressValue / 100);
+  const progressValue = Math.round(
+    Math.max(PROGRESS_CONFIG.MIN_VALUE, Math.min(PROGRESS_CONFIG.MAX_VALUE, dailyProgress || METRICS.DEFAULT_DAILY_PROGRESS))
+  );
+  const progressCircumference = PROGRESS_CONFIG.CIRCUMFERENCE_MULTIPLIER * 50; // radius of 50
+  const progressOffset = progressCircumference * (1 - progressValue / PROGRESS_CONFIG.MAX_VALUE);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -97,8 +49,8 @@ export default function HomePage() {
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return "Good Morning";
-    if (hour >= 12 && hour < 18) return "Good Afternoon";
+    if (hour >= GREETING_TIME_RANGES.MORNING.start && hour < GREETING_TIME_RANGES.MORNING.end) return "Good Morning";
+    if (hour >= GREETING_TIME_RANGES.AFTERNOON.start && hour < GREETING_TIME_RANGES.AFTERNOON.end) return "Good Afternoon";
     return "Good Evening";
   }, []);
 
@@ -232,7 +184,7 @@ export default function HomePage() {
                 <span className="text-xs font-medium uppercase tracking-[0.3em] text-slate-400">Always here</span>
               </div>
               <div className="-mx-2 flex gap-3 overflow-x-auto px-2 pb-1 scrollbar-none">
-                {FAVORITES.map((item) => (
+                {DEFAULT_FAVORITES.map((item) => (
                   <button
                     key={item}
                     type="button"

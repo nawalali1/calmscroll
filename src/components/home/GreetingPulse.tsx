@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { X } from "lucide-react";
 import Button from "@/components/ui/Button";
+import { TOAST_DURATIONS } from "@/config/timings";
 
 const variants: Variants = {
   hidden: { opacity: 0, scale: 0.85 },
@@ -24,7 +25,7 @@ type GreetingPulseProps = {
 export function GreetingPulse({ firstName, open, onDismiss }: GreetingPulseProps) {
   useEffect(() => {
     if (!open) return;
-    const timeout = window.setTimeout(onDismiss, 2500);
+    const timeout = window.setTimeout(onDismiss, TOAST_DURATIONS.GREETING);
     return () => window.clearTimeout(timeout);
   }, [open, onDismiss]);
 

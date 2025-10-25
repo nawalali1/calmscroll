@@ -1,6 +1,7 @@
 import { getSupabaseClient } from "./supabase/client";
 import { todayKey } from "@/utils/dates";
 import { logger } from "@/utils/logger";
+import { METRICS_FIELDS, DEFAULT_METRICS } from "@/config/constants";
 
 export type MetricsRow = {
   id?: string;
@@ -15,9 +16,6 @@ export type MetricsRow = {
   created_at?: string;
   updated_at?: string;
 };
-
-const METRICS_FIELDS =
-  "id, user_id, day_key, minutes_read, cards_read, tasks_done, streak, open_count, mood, created_at, updated_at";
 
 export async function fetchMetricsRow(userId: string, dayKey: string): Promise<MetricsRow | null> {
   const supabase = getSupabaseClient();
@@ -41,12 +39,12 @@ export async function createMetricsRow(userId: string, dayKey: string): Promise<
   const defaults: MetricsRow = {
     user_id: userId,
     day_key: dayKey,
-    minutes_read: 0,
-    cards_read: 0,
-    tasks_done: 0,
-    streak: 0,
-    open_count: 1,
-    mood: null,
+    minutes_read: DEFAULT_METRICS.MINUTES_READ,
+    cards_read: DEFAULT_METRICS.CARDS_READ,
+    tasks_done: DEFAULT_METRICS.TASKS_DONE,
+    streak: DEFAULT_METRICS.STREAK,
+    open_count: DEFAULT_METRICS.OPEN_COUNT,
+    mood: DEFAULT_METRICS.MOOD,
   };
 
   const { data, error } = await supabase

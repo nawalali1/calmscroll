@@ -1,39 +1,21 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Activity, Frown, Heart, Meh, Smile, Sparkles, Sun } from "lucide-react";
+import { Heart, Sparkles } from "lucide-react";
 import GlassyCard from "@/components/GlassyCard";
 import BottomNav from "@/components/BottomNav";
 import { getSupabaseClient } from "@/lib/supabase/client";
-
-const DAILY_SCORE = 72;
-
-const MOODS = [
-  { label: "Very Low", icon: Frown },
-  { label: "Low", icon: Activity },
-  { label: "Balanced", icon: Meh },
-  { label: "Aligned", icon: Smile },
-  { label: "Elevated", icon: Sun },
-] as const;
+import { MOODS, WEEK_TEMPLATE } from "@/config/content";
+import { PROGRESS_RING, PROGRESS_CONFIG, METRICS } from "@/config/ui";
 
 type WeekDay = { day: string; logged: boolean };
 
-const WEEK_TEMPLATE: WeekDay[] = [
-  { day: "Mon", logged: true },
-  { day: "Tue", logged: true },
-  { day: "Wed", logged: false },
-  { day: "Thu", logged: true },
-  { day: "Fri", logged: false },
-  { day: "Sat", logged: true },
-  { day: "Sun", logged: true },
-];
-
 function DailyScoreRing({ value, prefersReducedMotion }: { value: number; prefersReducedMotion: boolean }) {
-  const radius = 56;
-  const strokeWidth = 10;
-  const circumference = 2 * Math.PI * radius;
-  const clamped = Math.min(100, Math.max(0, value));
-  const offset = circumference - (clamped / 100) * circumference;
+  const radius = PROGRESS_RING.RADIUS;
+  const strokeWidth = PROGRESS_RING.STROKE_WIDTH;
+  const circumference = PROGRESS_CONFIG.CIRCUMFERENCE_MULTIPLIER * radius;
+  const clamped = Math.min(PROGRESS_CONFIG.MAX_VALUE, Math.max(PROGRESS_CONFIG.MIN_VALUE, value));
+  const offset = circumference - (clamped / PROGRESS_CONFIG.MAX_VALUE) * circumference;
 
   return (
     <div className="relative flex h-48 w-48 items-center justify-center">
@@ -72,7 +54,7 @@ function DailyScoreRing({ value, prefersReducedMotion }: { value: number; prefer
 
 export default function TrackerPage() {
   const [selectedMood, setSelectedMood] = useState(2);
-  const [weekLog, setWeekLog] = useState<WeekDay[]>(() => WEEK_TEMPLATE.map((entry) => ({ ...entry })));
+  const [weekLog, setWeekLog] = useState<WeekDay[]>(() => WEEK_TEMPLATE.map((entry) => ({ day: entry.day, logged: entry.logged })));
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
   useEffect(() => {
@@ -155,7 +137,7 @@ export default function TrackerPage() {
                   Tap how you feel, review weekly streaks, and celebrate the micro-wins that keep you grounded.
                 </p>
               </div>
-              <DailyScoreRing value={DAILY_SCORE} prefersReducedMotion={prefersReducedMotion} />
+              <DailyScoreRing value={METRICS.MAX_DAILY_SCORE} prefersReducedMotion={prefersReducedMotion} />
             </div>
             <div className="pointer-events-none absolute inset-x-0 bottom-[-1px]" aria-hidden>
               <svg viewBox="0 0 375 60" xmlns="http://www.w3.org/2000/svg" className="h-12 w-full text-white/60">

@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { TOAST_DURATIONS } from "@/config/timings";
+import { TOAST_CONFIG } from "@/config/ui";
 
 type ToastStatus = "default" | "success" | "error";
 
@@ -35,10 +37,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const notify = useCallback(
-    ({ duration = 4000, status = "default", ...rest }: ToastOptions) => {
+    ({ duration = TOAST_DURATIONS.DEFAULT, status = "default", ...rest }: ToastOptions) => {
       const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now());
       const toast: ToastState = { id, status, duration, ...rest };
-      setToasts((current) => [toast, ...current].slice(0, 3));
+      setToasts((current) => [toast, ...current].slice(0, TOAST_CONFIG.MAX_VISIBLE));
       window.setTimeout(() => remove(id), duration);
     },
     [remove]

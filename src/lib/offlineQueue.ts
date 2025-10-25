@@ -1,6 +1,8 @@
-const DB_NAME = "calmscroll-offline";
-const DB_VERSION = 1;
-const STORE_NAME = "queue";
+import { INDEXEDDB_CONFIG } from "@/config/constants";
+
+const DB_NAME = INDEXEDDB_CONFIG.NAME;
+const DB_VERSION = INDEXEDDB_CONFIG.VERSION;
+const STORE_NAME = INDEXEDDB_CONFIG.QUEUE_STORE_NAME;
 
 export type QueueItem<T = unknown> = {
   id: string;

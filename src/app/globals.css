@@ -45,7 +45,8 @@ body {
   }
 
   .page-shell {
-    @apply relative mx-auto w-full max-w-[430px] min-h-[100dvh] bg-white dark:bg-black;
+    @apply relative mx-auto w-full min-h-[100dvh] bg-white dark:bg-black;
+    max-width: var(--max-page-width);
   }
 
   .screen {

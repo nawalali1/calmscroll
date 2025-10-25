@@ -1,3 +1,11 @@
+// Configuration constants
+const CONFIG = {
+  DEFAULT_COOLDOWN_MINS: 10,
+  DEFAULT_TITLE: "Pause to breathe",
+  DEFAULT_WHY: "Take three breaths before opening this site.",
+  DEFAULT_DOMAINS: ["instagram.com", "tiktok.com"],
+};
+
 function uid() {
   return (crypto?.randomUUID?.() ?? Date.now().toString()) + Math.random().toString(16).slice(2);
 }
@@ -38,7 +46,7 @@ function render(list) {
         <input data-field="domains" value="${(item.rules?.domains || []).join(", ")}" />
       </label>
       <label>Cooldown (minutes)
-        <input data-field="cooldown" type="number" min="1" value="${item.rules?.cooldownMins ?? 10}" />
+        <input data-field="cooldown" type="number" min="1" value="${item.rules?.cooldownMins ?? CONFIG.DEFAULT_COOLDOWN_MINS}" />
       </label>
       <label style="display:flex; align-items:center; gap:6px; font-weight:500;">
         <input data-field="enabled" type="checkbox" ${item.rules?.enabled !== false ? "checked" : ""} /> Enable rules
@@ -64,14 +72,14 @@ function render(list) {
         ...(list[index].rules || {}),
         domains,
         enabled: list[index].rules?.enabled !== false,
-        cooldownMins: list[index].rules?.cooldownMins ?? 10,
+        cooldownMins: list[index].rules?.cooldownMins ?? CONFIG.DEFAULT_COOLDOWN_MINS,
       };
     });
     card.querySelector('[data-field="cooldown"]').addEventListener("input", (event) => {
       list[index].rules = {
         ...(list[index].rules || {}),
         domains: list[index].rules?.domains || [],
-        cooldownMins: Number(event.target.value || 10),
+        cooldownMins: Number(event.target.value || CONFIG.DEFAULT_COOLDOWN_MINS),
         enabled: list[index].rules?.enabled !== false,
       };
     });
@@ -79,7 +87,7 @@ function render(list) {
       list[index].rules = {
         ...(list[index].rules || {}),
         domains: list[index].rules?.domains || [],
-        cooldownMins: list[index].rules?.cooldownMins ?? 10,
+        cooldownMins: list[index].rules?.cooldownMins ?? CONFIG.DEFAULT_COOLDOWN_MINS,
         enabled: event.target.checked,
       };
     });
@@ -108,10 +116,10 @@ document.getElementById("add").addEventListener("click", () => {
     const next = [
       {
         id: uid(),
-        title: "Pause to breathe",
-        why: "Take three breaths before opening this site.",
+        title: CONFIG.DEFAULT_TITLE,
+        why: CONFIG.DEFAULT_WHY,
         active: true,
-        rules: { domains: ["instagram.com", "tiktok.com"], cooldownMins: 10, enabled: true },
+        rules: { domains: CONFIG.DEFAULT_DOMAINS, cooldownMins: CONFIG.DEFAULT_COOLDOWN_MINS, enabled: true },
       },
       ...list,
     ];

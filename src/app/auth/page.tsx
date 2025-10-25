@@ -3,6 +3,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { UI_DELAYS } from "@/config/timings";
 
 const FIELDS = [
   { id: "firstName", label: "First Name", type: "text", autoComplete: "given-name", placeholder: "First name" },
@@ -72,7 +73,7 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 600));
+      await new Promise((resolve) => setTimeout(resolve, UI_DELAYS.AUTH_REDIRECT));
       if (typeof window !== "undefined") {
         window.localStorage.setItem("calmscroll_session", "1");
       }

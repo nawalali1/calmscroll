@@ -1,3 +1,12 @@
+// Configuration constants
+const CONFIG = {
+  DEFAULT_COOLDOWN_MINS: 10,
+  NOTIFICATION_PRIORITY: 2,
+  NOTIFICATION_ICON: "icon128.png",
+  DEFAULT_TITLE: "Remember your intention",
+  DEFAULT_MESSAGE: "Take a breath before you scroll.",
+};
+
 // Store schema: { intentions: [{ id, title, why, active, rules: { domains[], cooldownMins, enabled } }], lastShown: { [domain]: timestamp } }
 async function getState() {
   return new Promise((resolve) => chrome.storage.sync.get(["intentions", "lastShown"], resolve));
@@ -20,7 +29,7 @@ async function maybeNudge(activeUrl) {
   const { intentions = [], lastShown = {} } = await getState();
   const active = intentions.filter((intention) => intention.active && intention.rules?.enabled);
   for (const intention of active) {
-    const cooldownMs = Math.max(1, Number(intention.rules.cooldownMins || 10)) * 60 * 1000;
+    const cooldownMs = Math.max(1, Number(intention.rules.cooldownMins || CONFIG.DEFAULT_COOLDOWN_MINS)) * 60 * 1000;
     const hit = matchesDomain(activeUrl, intention.rules.domains || []);
     if (!hit) continue;
 
@@ -30,10 +39,10 @@ async function maybeNudge(activeUrl) {
 
     chrome.notifications.create({
       type: "basic",
-      iconUrl: "icon128.png",
-      title: intention.title || "Remember your intention",
-      message: intention.why || "Take a breath before you scroll.",
-      priority: 2,
+      iconUrl: CONFIG.NOTIFICATION_ICON,
+      title: intention.title || CONFIG.DEFAULT_TITLE,
+      message: intention.why || CONFIG.DEFAULT_MESSAGE,
+      priority: CONFIG.NOTIFICATION_PRIORITY,
       buttons: [{ title: "Breathe" }],
     });
     lastShown[matchingDomain] = now();

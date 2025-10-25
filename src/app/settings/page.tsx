@@ -8,6 +8,8 @@ import Input from "@/components/ui/Input";
 import BottomNav from "@/components/BottomNav";
 import { motion } from "framer-motion";
 import { User, Bell, Palette, Download, Trash2, CheckCircle2, Circle } from "lucide-react";
+import { STORAGE_KEYS, DB_TABLES } from "@/config/constants";
+import { TOAST_DURATIONS } from "@/config/timings";
 
 type ThemeChoice = "system" | "light" | "dark";
 
@@ -75,9 +77,9 @@ export default function SettingsPage() {
 
         setUserId(session.user.id);
 
-        const localProfile = window.localStorage.getItem("calmscroll_profile");
-        const localTheme = window.localStorage.getItem("calmscroll_theme");
-        const localNotifications = window.localStorage.getItem("calmscroll_notifications");
+        const localProfile = window.localStorage.getItem(STORAGE_KEYS.PROFILE);
+        const localTheme = window.localStorage.getItem(STORAGE_KEYS.THEME);
+        const localNotifications = window.localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
 
         let shouldMigrate = false;
         const migratedData: Record<string, unknown> = {};
@@ -104,7 +106,7 @@ export default function SettingsPage() {
         }
 
         const { data: profileData, error } = await supabase
-          .from("profiles")
+          .from(DB_TABLES.PROFILES)
           .select("*")
           .eq("id", session.user.id)
           .maybeSingle();
@@ -114,10 +116,10 @@ export default function SettingsPage() {
         }
 
         if (shouldMigrate && !profileData) {
-          await supabase.from("profiles").insert({ id: session.user.id, ...migratedData });
-          window.localStorage.removeItem("calmscroll_profile");
-          window.localStorage.removeItem("calmscroll_theme");
-          window.localStorage.removeItem("calmscroll_notifications");
+          await supabase.from(DB_TABLES.PROFILES).insert({ id: session.user.id, ...migratedData });
+          window.localStorage.removeItem(STORAGE_KEYS.PROFILE);
+          window.localStorage.removeItem(STORAGE_KEYS.THEME);
+          window.localStorage.removeItem(STORAGE_KEYS.NOTIFICATIONS);
         }
 
         const data = profileData || migratedData;
@@ -158,7 +160,7 @@ export default function SettingsPage() {
     try {
       setSaveStatus("Saving...");
 
-      const { error } = await supabase.from("profiles").upsert({
+      const { error } = await supabase.from(DB_TABLES.PROFILES).upsert({
         id: userId,
         first_name: draftProfile.firstName,
         last_name: draftProfile.lastName,
@@ -171,11 +173,11 @@ export default function SettingsPage() {
       setProfile(draftProfile);
       setEditingProfile(false);
       setSaveStatus("Saved!");
-      setTimeout(() => setSaveStatus(null), 2000);
+      setTimeout(() => setSaveStatus(null), TOAST_DURATIONS.SUCCESS);
     } catch (error) {
       console.error("Error saving profile:", error);
       setSaveStatus("Error saving");
-      setTimeout(() => setSaveStatus(null), 3000);
+      setTimeout(() => setSaveStatus(null), TOAST_DURATIONS.ERROR);
     }
   };
 
@@ -189,7 +191,7 @@ export default function SettingsPage() {
     try {
       setNotificationPrefs((prev) => ({ ...prev, [key]: newValue }));
 
-      const { error } = await supabase.from("profiles").upsert({
+      const { error } = await supabase.from(DB_TABLES.PROFILES).upsert({
         id: userId,
         [dbKey]: newValue,
         updated_at: new Date().toISOString(),
@@ -213,7 +215,7 @@ export default function SettingsPage() {
     applyTheme(value);
 
     try {
-      const { error } = await supabase.from("profiles").upsert({
+      const { error } = await supabase.from(DB_TABLES.PROFILES).upsert({
         id: userId,
         theme: value,
         updated_at: new Date().toISOString(),
@@ -252,7 +254,7 @@ export default function SettingsPage() {
     if (!confirmed) return;
 
     try {
-      await supabase.from("profiles").update({ deleted_at: new Date().toISOString() }).eq("id", userId);
+      await supabase.from(DB_TABLES.PROFILES).update({ deleted_at: new Date().toISOString() }).eq("id", userId);
       await supabase.auth.signOut();
       window.location.href = "/";
     } catch (error) {
