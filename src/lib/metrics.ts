@@ -12,7 +12,7 @@ export type MetricsRow = {
   tasks_done: number;
   streak: number;
   open_count: number;
-  mood?: string | null;
+  mood_score?: number | null;
   created_at?: string;
   updated_at?: string;
 };
@@ -44,7 +44,7 @@ export async function createMetricsRow(userId: string, dayKey: string): Promise<
     tasks_done: DEFAULT_METRICS.TASKS_DONE,
     streak: DEFAULT_METRICS.STREAK,
     open_count: DEFAULT_METRICS.OPEN_COUNT,
-    mood: DEFAULT_METRICS.MOOD,
+    mood_score: DEFAULT_METRICS.MOOD_SCORE,
   };
 
   const { data, error } = await supabase
@@ -88,7 +88,7 @@ export async function ensureTodayMetrics(userId: string, dayKey: string = todayK
 export async function updateMetrics(
   userId: string,
   dayKey: string,
-  patch: Partial<Pick<MetricsRow, "minutes_read" | "cards_read" | "tasks_done" | "streak" | "open_count" | "mood">>
+  patch: Partial<Pick<MetricsRow, "minutes_read" | "cards_read" | "tasks_done" | "streak" | "open_count" | "mood_score">>
 ): Promise<MetricsRow> {
   const supabase = getSupabaseClient();
   const { data, error } = await supabase
@@ -117,6 +117,6 @@ export async function incrementCardsRead(userId: string, dayKey: string, amount 
   return updateMetrics(userId, dayKey, { cards_read: (current.cards_read ?? 0) + amount });
 }
 
-export async function setMood(userId: string, dayKey: string, mood: string): Promise<MetricsRow> {
-  return updateMetrics(userId, dayKey, { mood });
+export async function setMood(userId: string, dayKey: string, moodScore: number): Promise<MetricsRow> {
+  return updateMetrics(userId, dayKey, { mood_score: moodScore });
 }

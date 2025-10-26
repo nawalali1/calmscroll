@@ -36,7 +36,7 @@ export const EXPORTABLE_TABLES = [
 
 // Metrics Fields
 export const METRICS_FIELDS =
-  "id, user_id, date_key, minutes_read, cards_read, tasks_done, streak, open_count, mood, created_at, updated_at";
+  "id, user_id, date_key, minutes_read, cards_read, tasks_done, streak, open_count, mood_score, created_at, updated_at";
 
 // Default Values
 export const DEFAULT_METRICS = {
@@ -45,7 +45,7 @@ export const DEFAULT_METRICS = {
   TASKS_DONE: 0,
   STREAK: 0,
   OPEN_COUNT: 1,
-  MOOD: null,
+  MOOD_SCORE: null,
 } as const;
 
 export const DEFAULT_PROFILE = {
