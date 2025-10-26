@@ -1,14 +1,43 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { useTheme } from "@/components/providers/ThemeProvider";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { CheckCircle2, Clock, Wind, X } from "lucide-react";
-import GlassCard from "@/components/ui/GlassCard";
-import Button from "@/components/ui/Button";
-import Input from "@/components/ui/Input";
 import BottomNav from "@/components/BottomNav";
+import UnwindProgressRing from "@/components/ui/UnwindProgressRing";
+
+// Background decoration component
+function BackgroundDecor({ theme }: { theme: 'light' | 'dark' | string }) {
+  const lightBg =
+    'linear-gradient(180deg, rgb(245 241 255) 0%, rgb(240 247 255) 40%, rgb(255 246 240) 100%)';
+  const darkBg =
+    'linear-gradient(180deg, rgb(7 16 28) 0%, rgb(15 23 42) 45%, rgb(2 6 23) 100%)';
+
+  const lightGlow =
+    'radial-gradient(700px 360px at 50% -120px, rgba(180,200,255,0.28), transparent 70%)';
+  const darkGlow =
+    'radial-gradient(700px 360px at 50% -120px, rgba(64,83,216,0.22), transparent 70%)';
+
+  return (
+    <>
+      <div
+        className="absolute inset-0 -z-10"
+        style={{ backgroundImage: theme === 'dark' ? `${darkGlow}, ${darkBg}` : `${lightGlow}, ${lightBg}` }}
+      />
+      {/* side vignettes */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-28 -z-10 bg-gradient-to-r from-background to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-28 -z-10 bg-gradient-to-l from-background to-transparent" />
+    </>
+  );
+}
+
+// Glass style constants
+const glassCard =
+  "rounded-2xl bg-card/70 backdrop-blur-xl border border-border/40 shadow-[0_10px_30px_rgba(0,0,0,0.10)] p-6";
+const glassNav =
+  "rounded-3xl bg-card/70 backdrop-blur-md border border-border/40 shadow-[0_8px_24px_rgba(0,0,0,0.12)]";
 
 // Types
 type Intention = {
@@ -21,7 +50,10 @@ type Intention = {
 };
 
 type UserProfile = {
-  display_name: string | null;
+  display_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
 };
 
 type UnwindSession = {
@@ -32,6 +64,7 @@ type UnwindSession = {
 
 export default function HomePage() {
   const { theme } = useTheme();
+  const reducedMotion = useReducedMotion();
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [activeIntention, setActiveIntention] = useState<Intention | null>(null);
   const [intentionText, setIntentionText] = useState("");
@@ -43,10 +76,7 @@ export default function HomePage() {
     progress: 0
   });
   const [loading, setLoading] = useState(true);
-
-  // Dynamic color variables for theme-aware SVG - updates when theme changes
-  const progressRingColor = theme === 'dark' ? '#60a5fa' : '#3b82f6';
-  const progressBgColor = theme === 'dark' ? '#374151' : '#e5e7eb';
+  const unwindIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Load user data and active intention on mount
   useEffect(() => {
@@ -78,7 +108,11 @@ export default function HomePage() {
       if (profileError) {
         console.error('Error loading profile:', profileError);
       } else if (profile) {
-        setUserProfile(profile);
+        // Add email from session to profile
+        setUserProfile({
+          ...profile,
+          email: session.user.email,
+        });
       }
 
       // Load active intention
@@ -190,19 +224,36 @@ export default function HomePage() {
   const startUnwindSession = () => {
     setShowUnwindSheet(true);
     setUnwindSession(prev => ({ ...prev, isActive: true, progress: 0 }));
-    
+
+    // Clear existing interval if any
+    if (unwindIntervalRef.current) {
+      clearInterval(unwindIntervalRef.current);
+    }
+
     // Start timer
-    const interval = setInterval(() => {
+    unwindIntervalRef.current = setInterval(() => {
       setUnwindSession(prev => {
         const newProgress = prev.progress + (100 / prev.duration);
         if (newProgress >= 100) {
-          clearInterval(interval);
+          if (unwindIntervalRef.current) {
+            clearInterval(unwindIntervalRef.current);
+            unwindIntervalRef.current = null;
+          }
           completeUnwindSession();
           return { ...prev, progress: 100, isActive: false };
         }
         return { ...prev, progress: newProgress };
       });
     }, 1000);
+  };
+
+  const cancelUnwindSession = () => {
+    if (unwindIntervalRef.current) {
+      clearInterval(unwindIntervalRef.current);
+      unwindIntervalRef.current = null;
+    }
+    setUnwindSession(prev => ({ ...prev, isActive: false, progress: 0 }));
+    setShowUnwindSheet(false);
   };
 
   const completeUnwindSession = async () => {
@@ -256,18 +307,40 @@ export default function HomePage() {
     }
   };
 
-  // Get display name from profile, with fallback to email
-  const displayName = userProfile?.display_name?.trim()
-    ? userProfile.display_name
-    : "Friend";
+  // Get display name from profile, preferring first_name, then display_name, then email
+  const getDisplayName = () => {
+    if (userProfile?.first_name?.trim()) {
+      return userProfile.first_name;
+    }
+    if (userProfile?.display_name?.trim()) {
+      return userProfile.display_name;
+    }
+    if (userProfile?.email) {
+      return userProfile.email.split('@')[0];
+    }
+    return "Friend";
+  };
+
+  const displayName = getDisplayName();
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--bg-primary)] text-[var(--ink)] transition-colors duration-300">
+      <div
+        className="min-h-screen flex items-center justify-center px-4 py-8"
+        style={{
+          background: theme === "dark"
+            ? "linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%)"
+            : "linear-gradient(135deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%)",
+        }}
+      >
         <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-2 border-[var(--ink-muted)] border-t-[var(--accent)]" />
-          <p className="text-sm font-medium uppercase tracking-widest text-[var(--ink-muted)]">
-            Loading your calm space…
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            className="w-10 h-10 rounded-full border-2 border-[var(--card-border)] border-t-[var(--accent)]"
+          />
+          <p className="text-sm font-medium uppercase tracking-wide text-[var(--ink-muted)]">
+            Loading…
           </p>
         </div>
       </div>
@@ -275,184 +348,191 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--bg-primary)] text-[var(--ink)] transition-colors duration-300 flex flex-col">
-      {/* Header */}
-      <motion.header
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="px-6 pt-8 pb-4"
-        style={{ paddingTop: `calc(2rem + env(safe-area-inset-top))` }}
-      >
-        <div>
-          <h1 className="text-3xl font-bold mb-1">Welcome back, {displayName}</h1>
-          <p className="text-[var(--ink-muted)] text-sm">
+    <motion.main
+      initial={!reducedMotion ? { opacity: 0, y: 8 } : { opacity: 1 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={!reducedMotion ? { duration: 0.25 } : { duration: 0 }}
+      className="relative min-h-screen w-full flex flex-col items-center justify-start px-4 py-8 gap-6 overflow-x-hidden"
+    >
+      <BackgroundDecor theme={theme} />
+      {/* Page Container - centered column */}
+      <div className="w-full max-w-sm flex flex-col gap-6">
+        {/* Greeting Section - ~48px top padding */}
+        <motion.div
+          initial={!reducedMotion ? { opacity: 0, y: -12 } : { opacity: 1 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={!reducedMotion ? { delay: 0.05, duration: 0.3 } : { duration: 0 }}
+          className="pt-12 text-center"
+        >
+          <h1 className="text-3xl md:text-[34px] font-semibold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+            Welcome back, {displayName}
+          </h1>
+          <p className="text-base text-muted-foreground">
             What would you like to focus on?
           </p>
-        </div>
-      </motion.header>
+        </motion.div>
 
-      <div className="flex-1 px-6 space-y-6 pb-6">
-        {/* Set Intention Section */}
+        {/* Intention Input Card - default state */}
         {!activeIntention && (
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={!reducedMotion ? { opacity: 0, y: 8 } : { opacity: 1 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
+            transition={!reducedMotion ? { delay: 0.1, duration: 0.3 } : { duration: 0 }}
+            whileHover={!reducedMotion ? { y: -3 } : {}}
+            className={`${glassCard} space-y-4`}
           >
-            <GlassCard className="p-6">
-              <h2 className="text-lg font-semibold mb-4">Set Your Intention</h2>
-              <p className="text-sm mb-4 text-[var(--ink-muted)]">
-                What did you open your phone to do?
-              </p>
-              <div className="space-y-3">
-                <Input
-                  value={intentionText}
-                  onChange={(e) => setIntentionText(e.target.value)}
-                  placeholder="e.g., Check messages, Read an article, Make a call..."
-                  onKeyDown={(e) => e.key === 'Enter' && createIntention()}
-                />
-                <Button
-                  onClick={createIntention}
-                  disabled={!intentionText.trim() || isSubmitting}
-                  className="w-full"
-                >
-                  {isSubmitting ? "Setting intention..." : "Start with intention"}
-                </Button>
-              </div>
-            </GlassCard>
+            <h2 className="text-sm font-medium text-muted-foreground">Set Your Intention</h2>
+
+            <div className="relative">
+              <input
+                type="text"
+                value={intentionText}
+                onChange={(e) => setIntentionText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && createIntention()}
+                className="peer w-full bg-transparent border border-border/50 rounded-xl h-11 px-4 text-sm outline-none transition-all focus:ring-2 focus:ring-ring/60"
+                placeholder=" "
+                aria-label="Set your intention"
+              />
+              <label className="absolute left-4 top-2.5 text-sm text-muted-foreground transition-all pointer-events-none peer-focus:-top-2 peer-focus:text-xs peer-placeholder-shown:top-2.5">
+                What&apos;s your intention?
+              </label>
+            </div>
+
+            <button
+              onClick={createIntention}
+              disabled={!intentionText.trim() || isSubmitting}
+              className="h-11 w-full rounded-xl bg-gradient-to-r from-primary to-accent text-primary-foreground font-medium hover:shadow-lg hover:shadow-primary/20 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50"
+              aria-busy={isSubmitting}
+            >
+              {isSubmitting ? "Setting..." : "Start with intention"}
+            </button>
           </motion.div>
         )}
 
-        {/* Active Intention Card */}
+        {/* Active Intention Card - active state */}
         {activeIntention && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={!reducedMotion ? { opacity: 0, scale: 0.95 } : { opacity: 1 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
+            transition={!reducedMotion ? { delay: 0.1, duration: 0.3 } : { duration: 0 }}
+            whileHover={!reducedMotion ? { y: -3 } : {}}
+            className={glassCard}
           >
-            <GlassCard className="p-6 space-y-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h3 className="font-semibold text-lg mb-3">Your Intention</h3>
-                  <p className="text-[var(--ink)] text-base leading-relaxed">
-                    {activeIntention.text}
-                  </p>
-                </div>
-                <div className="w-3 h-3 rounded-full bg-[var(--success)] animate-pulse mt-1 flex-shrink-0" />
-              </div>
+            <div className="mb-3">
+              <h2 className="text-xs font-medium text-muted-foreground mb-1">You planned to…</h2>
+              <p className="text-base md:text-lg font-medium text-foreground">{activeIntention.text}</p>
+            </div>
 
-              <div className="space-y-3">
-                <Button
-                  onClick={completeIntention}
-                  className="w-full flex items-center justify-center gap-2 bg-[var(--success)] hover:brightness-110 text-white py-3"
-                >
-                  <CheckCircle2 className="h-5 w-5" />
-                  Mark as Done
-                </Button>
+            <div className="h-px bg-border/40 my-3" />
 
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    onClick={() => snoozeIntention(5)}
-                    className="flex items-center justify-center gap-2 border border-[var(--card-border)] hover:bg-[var(--card)]/50 text-[var(--ink)] py-3"
-                  >
-                    <Clock className="h-5 w-5" />
-                    Snooze 5 min
-                  </Button>
+            <div className="grid grid-cols-3 gap-2">
+              <button
+                onClick={completeIntention}
+                className="h-10 rounded-xl bg-primary text-primary-foreground font-medium hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background flex items-center justify-center gap-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                Mark as done
+              </button>
 
-                  <Button
-                    onClick={startUnwindSession}
-                    className="flex items-center justify-center gap-2 border border-[var(--card-border)] hover:bg-[var(--card)]/50 text-[var(--ink)] py-3"
-                  >
-                    <Wind className="h-5 w-5" />
-                    Unwind 1 min
-                  </Button>
-                </div>
-              </div>
-            </GlassCard>
+              <button
+                onClick={() => snoozeIntention(5)}
+                className="h-10 rounded-xl border border-border/50 bg-card/30 hover:bg-card/50 text-sm font-medium flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+              >
+                <Clock className="w-4 h-4" />
+                Snooze 5 min
+              </button>
+
+              <button
+                onClick={startUnwindSession}
+                className="h-10 rounded-xl text-sm font-medium text-foreground/90 hover:underline flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
+              >
+                <Wind className="w-4 h-4" />
+                Unwind 1 min
+              </button>
+            </div>
           </motion.div>
         )}
-
       </div>
 
-      {/* Unwind Sheet */}
-      <AnimatePresence>
+      {/* Unwind Sheet - Half-height bottom sheet */}
+      <AnimatePresence mode="wait" initial={false}>
         {showUnwindSheet && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 flex items-end justify-center z-50"
-            onClick={() => setShowUnwindSheet(false)}
-          >
+          <>
             <motion.div
-              initial={{ y: "100%" }}
-              animate={{ y: "0%" }}
-              exit={{ y: "100%" }}
-              transition={{ type: "spring", damping: 25 }}
-              className="w-full max-w-md rounded-t-3xl p-6 bg-[var(--card)] text-[var(--ink)]"
-              onClick={(e) => e.stopPropagation()}
+              key="unwind-overlay"
+              initial={!reducedMotion ? { opacity: 0 } : { opacity: 0.3 }}
+              animate={{ opacity: 0.3 }}
+              exit={!reducedMotion ? { opacity: 0 } : { opacity: 0 }}
+              transition={!reducedMotion ? { duration: 0.2 } : { duration: 0 }}
+              className="fixed inset-0 bg-black z-40"
+              onClick={cancelUnwindSession}
+            />
+            <motion.div
+              key="unwind-sheet"
+              initial={!reducedMotion ? { y: "100%", opacity: 0 } : { y: "0%", opacity: 1 }}
+              animate={!reducedMotion ? { y: "0%", opacity: 1 } : { y: "0%", opacity: 1 }}
+              exit={!reducedMotion ? { y: "100%", opacity: 0 } : { y: "0%", opacity: 0 }}
+              transition={!reducedMotion
+                ? { type: "spring", stiffness: 260, damping: 24 }
+                : { duration: 0 }}
+              className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-sm rounded-t-3xl border border-border/40 border-b-0 bg-card/80 backdrop-blur-xl p-6 shadow-xl"
             >
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold">Unwind Session</h3>
+              {/* Header */}
+              <div className="flex items-center justify-between mb-6 relative">
+                <div className="absolute -left-6 top-0 bottom-0 w-1 rounded-full bg-gradient-to-b from-primary to-accent opacity-70" />
+                <h3 className="text-lg font-semibold text-foreground">Unwind</h3>
                 <button
-                  onClick={() => setShowUnwindSheet(false)}
-                  className="p-2 hover:bg-[var(--card-border)]/50 rounded-full"
+                  onClick={cancelUnwindSession}
+                  className="p-1.5 rounded-full hover:bg-border/50 transition-colors"
+                  aria-label="Close unwind session"
                 >
-                  <X className="h-5 w-5" />
+                  <X className="w-5 h-5 text-foreground" />
                 </button>
               </div>
 
-              <div className="text-center space-y-6">
-                <div className="relative w-32 h-32 mx-auto">
-                  <svg className="w-full h-full" viewBox="0 0 100 100">
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      fill="none"
-                      stroke={progressBgColor}
-                      strokeWidth="8"
-                    />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      fill="none"
-                      stroke={progressRingColor}
-                      strokeWidth="8"
-                      strokeLinecap="round"
-                      strokeDasharray="283"
-                      strokeDashoffset={283 - (283 * unwindSession.progress) / 100}
-                      transform="rotate(-90 50 50)"
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-2xl font-bold">
-                      {Math.ceil((unwindSession.duration * (100 - unwindSession.progress)) / 100)}s
-                    </span>
-                  </div>
-                </div>
-
-                <p className="text-[var(--ink-muted)]">
-                  {unwindSession.isActive
-                    ? "Follow your breath..."
-                    : "Take a minute to reset and refocus"}
-                </p>
-
-                {!unwindSession.isActive && (
-                  <Button onClick={startUnwindSession} className="w-full">
-                    Start 1-Minute Unwind
-                  </Button>
-                )}
+              {/* Progress Ring */}
+              <div className="flex justify-center mb-6">
+                <UnwindProgressRing
+                  duration={unwindSession.duration}
+                  elapsed={Math.floor((unwindSession.progress / 100) * unwindSession.duration)}
+                />
               </div>
+
+              {/* Status Text */}
+              <p className="text-center text-muted-foreground text-sm mb-6">
+                {unwindSession.isActive
+                  ? "Follow your breath. You're doing great."
+                  : "Take a minute to reset and refocus."}
+              </p>
+
+              {/* Button */}
+              {!unwindSession.isActive && (
+                <button
+                  onClick={startUnwindSession}
+                  className="w-full h-11 rounded-xl font-medium text-primary-foreground bg-accent hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background transition-all"
+                >
+                  Start 1-Minute Unwind
+                </button>
+              )}
             </motion.div>
-          </motion.div>
+          </>
         )}
       </AnimatePresence>
 
-      <div style={{ paddingBottom: `env(safe-area-inset-bottom)` }}>
-        <BottomNav />
-      </div>
-    </div>
+      {/* Bottom Nav */}
+      <motion.nav
+        initial={!reducedMotion ? { opacity: 0, y: 8 } : { opacity: 1 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={!reducedMotion ? { delay: 0.2, duration: 0.3 } : { duration: 0 }}
+        className="fixed bottom-0 left-0 right-0 z-30 max-w-sm mx-auto px-4 mb-4 pb-[env(safe-area-inset-bottom)]"
+      >
+        <div className={`${glassNav} px-4 py-2`}>
+          <BottomNav />
+        </div>
+      </motion.nav>
+
+      {/* Safe area spacer for bottom nav */}
+      <div className="h-24" />
+    </motion.main>
   );
 }
