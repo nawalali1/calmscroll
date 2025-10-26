@@ -145,8 +145,11 @@ export default function TrackerPage() {
   return (
     <>
       <div className="page-shell">
-        <div className="screen bg-[#F6F8FC] text-slate-900">
-          <header className="relative overflow-hidden rounded-b-[42px] bg-[linear-gradient(160deg,#0B3B64_0%,#3864FF_55%,#FF8FC6_100%)] px-6 pb-20 pt-[calc(env(safe-area-inset-top,0px)+2.25rem)] text-white shadow-[0_30px_80px_-30px_rgba(30,64,160,0.55)]">
+        <div className="screen text-[var(--ink)]">
+          <header
+            className="relative overflow-hidden rounded-b-[42px] px-6 pb-20 pt-[calc(env(safe-area-inset-top,0px)+2.25rem)] text-white shadow-[0_30px_80px_-30px_rgba(30,64,160,0.55)]"
+            style={{ backgroundImage: "linear-gradient(160deg,var(--bg-start) 0%,var(--bg-mid) 55%,var(--bg-end) 100%)" }}
+          >
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm uppercase tracking-[0.3em] text-white/75">Wellness Tracker</p>
@@ -167,12 +170,12 @@ export default function TrackerPage() {
             </div>
           </header>
 
-          <main className="flex-1 space-y-6 px-6 pb-[140px] pt-16">
-            <GlassyCard className="space-y-5 bg-white p-5 shadow-[0_24px_60px_-40px_rgba(30,64,160,0.45)]">
+          <main className="flex-1 space-y-6 px-6 pb-[140px] pt-16 text-[var(--ink)]">
+            <GlassyCard className="space-y-5 bg-[var(--card)] p-5 shadow-[0_24px_60px_-40px_rgba(30,64,160,0.25)]">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-900">How are you feeling?</h2>
-                  <p className="text-sm text-slate-500">Tap the mood that mirrors your current energy.</p>
+                  <h2 className="text-lg font-semibold">How are you feeling?</h2>
+                  <p className="text-sm text-[var(--ink-muted)]">Tap the mood that mirrors your current energy.</p>
                 </div>
                 <Heart className="h-5 w-5 text-rose-400" aria-hidden />
               </div>
@@ -190,10 +193,10 @@ export default function TrackerPage() {
                         void handleMoodSelect(index);
                       }}
                       onKeyDown={(event) => handleMoodKeyDown(event, index)}
-                      className={`flex h-14 w-14 items-center justify-center rounded-full border text-slate-600 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500 ${
+                      className={`flex h-14 w-14 items-center justify-center rounded-full border transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] ${
                         active
                           ? "scale-105 border-transparent bg-gradient-to-br from-cyan-400 via-indigo-400 to-purple-400 text-white shadow-lg"
-                          : "border-white/60 bg-white/70 hover:bg-white/90 active:scale-95"
+                          : "border-[var(--card-border)] bg-[var(--card)] text-[var(--ink)] hover:bg-[var(--card)]/85 active:scale-95"
                       }`}
                     >
                       <Icon className="h-5 w-5" aria-hidden />
@@ -204,46 +207,46 @@ export default function TrackerPage() {
               </div>
             </GlassyCard>
 
-            <GlassyCard className="space-y-4 bg-white p-5 shadow-[0_24px_60px_-40px_rgba(30,64,160,0.45)]">
+            <GlassyCard className="space-y-4 bg-[var(--card)] p-5 shadow-[0_24px_60px_-40px_rgba(30,64,160,0.25)]">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-slate-900">Today&apos;s Focus</h2>
+                <h2 className="text-lg font-semibold text-[var(--ink)]">Today&apos;s Focus</h2>
                 <Sparkles className="h-5 w-5 text-indigo-400" aria-hidden />
               </div>
-              <div className="space-y-3 text-sm text-slate-600">
-                <div className="flex items-center justify-between rounded-2xl bg-white/80 px-4 py-3 shadow-sm">
+              <div className="space-y-3 text-sm text-[var(--ink-muted)]">
+                <div className="flex items-center justify-between rounded-2xl bg-[var(--card)] px-4 py-3 shadow-sm">
                   <span>3-minute breathing reset</span>
-                  <button type="button" className="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">
+                  <button type="button" className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--accent)]">
                     Start
                   </button>
                 </div>
-                <div className="flex items-center justify-between rounded-2xl bg-white/80 px-4 py-3 shadow-sm">
+                <div className="flex items-center justify-between rounded-2xl bg-[var(--card)] px-4 py-3 shadow-sm">
                   <span>Log a gratitude spark</span>
-                  <button type="button" className="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">
+                  <button type="button" className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--accent)]">
                     Capture
                   </button>
                 </div>
-                <div className="flex items-center justify-between rounded-2xl bg-white/80 px-4 py-3 shadow-sm">
+                <div className="flex items-center justify-between rounded-2xl bg-[var(--card)] px-4 py-3 shadow-sm">
                   <span>Stretch it out break</span>
-                  <button type="button" className="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">
+                  <button type="button" className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--accent)]">
                     Begin
                   </button>
                 </div>
               </div>
             </GlassyCard>
 
-            <GlassyCard className="space-y-4 bg-white p-5 shadow-[0_24px_60px_-40px_rgba(30,64,160,0.45)]">
+            <GlassyCard className="space-y-4 bg-[var(--card)] p-5 shadow-[0_24px_60px_-40px_rgba(30,64,160,0.25)]">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-slate-900">This Week</h2>
-                <span className="text-xs font-medium uppercase tracking-[0.3em] text-slate-400">7 days</span>
+                <h2 className="text-lg font-semibold text-[var(--ink)]">This Week</h2>
+                <span className="text-xs font-medium uppercase tracking-[0.3em] text-[var(--ink-muted)]">7 days</span>
               </div>
-              <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-wide">
+              <div className="grid grid-cols-7 gap-2 text-center text-xs font-semibold uppercase tracking-wide text-[var(--ink)]">
                 {weekLog.map(({ day, logged }) => (
                   <div
                     key={day}
                     className={`flex h-16 flex-col items-center justify-center rounded-2xl border transition ${
                       logged
                         ? "border-transparent bg-gradient-to-br from-cyan-400 via-indigo-400 to-purple-400 text-white shadow"
-                        : "border-dashed border-slate-200 bg-white/60 text-slate-500"
+                        : "border-dashed border-[var(--card-border)] bg-[var(--card)] text-[var(--ink-muted)]"
                     }`}
                   >
                     <span>{day}</span>
@@ -252,7 +255,7 @@ export default function TrackerPage() {
                 ))}
               </div>
               {!weekLog.some((entry) => entry.logged) && (
-                <p className="text-sm text-slate-500">No logs yet. Mark how you feel to watch your streak grow.</p>
+                <p className="text-sm text-[var(--ink-muted)]">No logs yet. Mark how you feel to watch your streak grow.</p>
               )}
             </GlassyCard>
           </main>

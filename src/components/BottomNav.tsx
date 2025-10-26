@@ -15,7 +15,7 @@ export default function BottomNav() {
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-[430px] px-4 pb-4">
-      <div className="glass rounded-2xl px-3 py-2 backdrop-blur-md">
+      <div className="glass rounded-2xl px-3 py-2">
         <ul className="grid grid-cols-4">
           {items.map((item) => {
             const active = pathname === item.href;
@@ -23,7 +23,9 @@ export default function BottomNav() {
               <li key={item.href} className="text-center">
                 <Link
                   href={item.href}
-                  className={`block py-2 text-sm ${active ? "text-indigo-600" : "text-gray-500 dark:text-gray-400"}`}
+                  className={`block py-2 text-sm transition ${
+                    active ? "text-[var(--accent)]" : "text-[var(--ink-muted)]"
+                  }`}
                 >
                   {item.label}
                 </Link>

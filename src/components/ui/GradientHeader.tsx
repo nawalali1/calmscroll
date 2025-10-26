@@ -18,7 +18,8 @@ export function GradientHeader({ title, subtitle, children }: GradientHeaderProp
       initial={{ opacity: 0, y: -12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.18, ease: "easeOut" }}
-      className="relative isolate overflow-hidden bg-[linear-gradient(135deg,#A5C7FF_0%,#D0B8FF_50%,#FFB3D1_100%)] text-slate-900 shadow-[0_35px_80px_-35px_rgba(79,97,150,0.35)] dark:text-white"
+      className="relative isolate overflow-hidden text-slate-900 shadow-[0_35px_80px_-35px_rgba(79,97,150,0.35)] transition-colors dark:text-white"
+      style={{ backgroundImage: "linear-gradient(135deg,var(--bg-start) 0%,var(--bg-mid) 50%,var(--bg-end) 100%)" }}
     >
       <div className="pointer-events-none absolute inset-0 opacity-70">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_-10%,rgba(255,255,255,0.35),transparent_55%)]" aria-hidden />

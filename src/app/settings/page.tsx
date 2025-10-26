@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { useTheme } from "@/components/providers/ThemeProvider";
 import GlassCard from "@/components/ui/GlassCard";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -10,6 +11,7 @@ import { motion } from "framer-motion";
 import { User, Bell, Palette, Download, Trash2, CheckCircle2, Circle } from "lucide-react";
 
 type ThemeChoice = "system" | "light" | "dark";
+type Theme = "light" | "dark";
 
 type Profile = {
   firstName: string;
@@ -35,23 +37,8 @@ const DEFAULT_NOTIFICATIONS: NotificationPrefs = {
   weeklySummary: false,
 };
 
-function applyTheme(preference: ThemeChoice) {
-  if (typeof window === "undefined") return;
-  
-  const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const shouldBeDark = preference === "dark" || (preference === "system" && systemPrefersDark);
-  
-  // Apply dark class to html element (this is what Tailwind listens to)
-  if (shouldBeDark) {
-    document.documentElement.classList.add("dark");
-  } else {
-    document.documentElement.classList.remove("dark");
-  }
-  
-  console.log("✅ Theme applied:", { preference, shouldBeDark, classes: document.documentElement.className });
-}
-
 export default function SettingsPage() {
+  const { theme: globalTheme, setTheme: setGlobalTheme } = useTheme();
   const [profile, setProfile] = useState<Profile>(DEFAULT_PROFILE);
   const [editingProfile, setEditingProfile] = useState(false);
   const [draftProfile, setDraftProfile] = useState<Profile>(DEFAULT_PROFILE);
@@ -60,6 +47,40 @@ export default function SettingsPage() {
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
+
+  // Convert global theme to theme choice for display
+  useEffect(() => {
+    if (globalTheme) {
+      // If global theme matches system preference, show "system"
+      // Otherwise show the actual theme
+      const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const systemTheme: Theme = systemPrefersDark ? "dark" : "light";
+      
+      if (globalTheme === systemTheme) {
+        setThemeChoice("system");
+      } else {
+        setThemeChoice(globalTheme);
+      }
+    }
+  }, [globalTheme]);
+
+  // Get current background based on theme
+  const getCurrentBackground = useCallback(() => {
+    if (typeof window === "undefined") return 'linear-gradient(160deg, #0B3B64 0%, #5282FF 52%, #FFB3C7 100%)';
+    
+    const shouldBeDark = globalTheme === "dark";
+    
+    return shouldBeDark 
+      ? 'linear-gradient(160deg, #0f172a 0%, #1e293b 52%, #334155 100%)'
+      : 'linear-gradient(160deg, #0B3B64 0%, #5282FF 52%, #FFB3C7 100%)';
+  }, [globalTheme]);
+
+  const [currentBackground, setCurrentBackground] = useState(getCurrentBackground());
+
+  useEffect(() => {
+    // Update background when theme changes
+    setCurrentBackground(getCurrentBackground());
+  }, [globalTheme, getCurrentBackground]);
 
   useEffect(() => {
     async function loadSettings() {
@@ -76,7 +97,6 @@ export default function SettingsPage() {
         setUserId(session.user.id);
 
         const localProfile = window.localStorage.getItem("calmscroll_profile");
-        const localTheme = window.localStorage.getItem("calmscroll_theme");
         const localNotifications = window.localStorage.getItem("calmscroll_notifications");
 
         let shouldMigrate = false;
@@ -87,11 +107,6 @@ export default function SettingsPage() {
           migratedData.first_name = parsed.firstName;
           migratedData.last_name = parsed.lastName;
           migratedData.email = parsed.email;
-          shouldMigrate = true;
-        }
-
-        if (localTheme) {
-          migratedData.theme = localTheme;
           shouldMigrate = true;
         }
 
@@ -116,7 +131,6 @@ export default function SettingsPage() {
         if (shouldMigrate && !profileData) {
           await supabase.from("profiles").insert({ id: session.user.id, ...migratedData });
           window.localStorage.removeItem("calmscroll_profile");
-          window.localStorage.removeItem("calmscroll_theme");
           window.localStorage.removeItem("calmscroll_notifications");
         }
 
@@ -134,13 +148,12 @@ export default function SettingsPage() {
           weeklySummary: data.weekly_summary ?? false,
         };
 
-        const loadedTheme: ThemeChoice = (data.theme as ThemeChoice) || "system";
-
         setProfile(loadedProfile);
         setDraftProfile(loadedProfile);
         setNotificationPrefs(loadedNotifications);
-        setThemeChoice(loadedTheme);
-        applyTheme(loadedTheme);
+
+        // Theme is now handled by the global ThemeProvider
+        console.log("✅ Settings loaded with global theme:", globalTheme);
       } catch (err) {
         console.error("Error in loadSettings:", err);
       } finally {
@@ -149,7 +162,7 @@ export default function SettingsPage() {
     }
 
     loadSettings();
-  }, []);
+  }, [globalTheme]);
 
   const saveProfile = async () => {
     if (!userId) return;
@@ -205,26 +218,17 @@ export default function SettingsPage() {
   };
 
   const updateTheme = async (value: ThemeChoice) => {
-    if (!userId) return;
-    const supabase = getSupabaseClient();
-
     console.log("🎨 Changing theme to:", value);
     setThemeChoice(value);
-    applyTheme(value);
 
-    try {
-      const { error } = await supabase.from("profiles").upsert({
-        id: userId,
-        theme: value,
-        updated_at: new Date().toISOString(),
-      });
-
-      if (error) throw error;
-      
-      console.log("✅ Theme saved to database:", value);
-    } catch (error) {
-      console.error("Error updating theme:", error);
-    }
+    // Convert ThemeChoice to Theme for the global theme system
+    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const themeValue: Theme = value === "system" 
+      ? (systemPrefersDark ? "dark" : "light")
+      : value;
+    
+    // This will update the global theme and save to database automatically
+    setGlobalTheme(themeValue);
   };
 
   const exportData = () => {
@@ -263,7 +267,10 @@ export default function SettingsPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[linear-gradient(160deg,#0B3B64_0%,#5282FF_52%,#FFB3C7_100%)] dark:bg-[linear-gradient(160deg,#0f172a_0%,#1e293b_52%,#334155_100%)]">
+      <div 
+        className="flex min-h-screen items-center justify-center text-white transition-colors duration-300"
+        style={{ background: getCurrentBackground() }}
+      >
         <div className="flex flex-col items-center gap-4 text-white">
           <div className="h-12 w-12 animate-spin rounded-full border-2 border-white/40 border-t-white" />
           <p className="text-sm font-medium uppercase tracking-[0.28em] text-white/80">Loading settings…</p>
@@ -273,7 +280,10 @@ export default function SettingsPage() {
   }
 
   return (
-    <main className="relative min-h-svh bg-[linear-gradient(160deg,#0B3B64_0%,#5282FF_52%,#FFB3C7_100%)] dark:bg-[linear-gradient(160deg,#0f172a_0%,#1e293b_52%,#334155_100%)] pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] text-white transition-colors duration-300">
+    <main 
+      className="relative min-h-svh pb-[calc(env(safe-area-inset-bottom,0px)+6.5rem)] text-white transition-colors duration-300"
+      style={{ background: currentBackground }}
+    >
       <motion.header
         initial={{ opacity: 0, y: -12 }}
         animate={{ opacity: 1, y: 0 }}

@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { NotebookPen, Sparkles, StretchVertical, Wind } from "lucide-react";
+import { NotebookPen, Sparkles, StretchVertical, Wind, Flame, Clock, AlertCircle } from "lucide-react";
+import { motion } from "framer-motion";
 import { QuickActionPill } from "@/components/ui/QuickActionPill";
 import GlassyCard from "@/components/GlassyCard";
 import { Button } from "@/components/ui/Button";
@@ -10,6 +11,7 @@ import { Fab } from "@/components/ui/Fab";
 import BottomSheet from "@/components/BottomSheet";
 import BottomNav from "@/components/BottomNav";
 import { useHomeData } from "@/hooks/useHomeData";
+import { fadeInUp, scaleIn } from "@/lib/motion";
 
 type QuickActionId = "breathe" | "reflect" | "stretch";
 
@@ -49,38 +51,14 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
 ];
 
-const FOCUS_CARDS = [
-  {
-    id: "focus-breathe",
-    title: "1-Minute Breathe",
-    description: "Reset your mind with a guided breathing session.",
-    accent: "from-[#86B7FF] to-[#B39CFF]",
-    icon: Wind,
-  },
-  {
-    id: "focus-reflection",
-    title: "Guided Reflection",
-    description: "Take a moment to check in with yourself.",
-    accent: "from-[#BF9FFF] to-[#FF9ACB]",
-    icon: NotebookPen,
-  },
-  {
-    id: "focus-stretch",
-    title: "Stretch Break",
-    description: "Release tension with gentle movement prompts.",
-    accent: "from-[#8DD2FF] to-[#A78BFA]",
-    icon: StretchVertical,
-  },
-] as const;
-
-const FAVORITES = ["Morning Journal", "Gratitude List", "Calm Playlist", "Reset Breath", "Mini Stretch"] as const;
+// Remove hardcoded FOCUS_CARDS and FAVORITES - will be generated from real data
 
 export default function HomePage() {
   const router = useRouter();
   const [activeAction, setActiveAction] = useState<QuickAction | null>(null);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const { userProfile, dailyProgress, loading } = useHomeData();
+  const { userProfile, dailyProgress, loading, error, moodStreak, recentReflections, favoriteItems } = useHomeData();
   const userDisplayName = userProfile?.display_name?.trim() || "Friend";
   const progressValue = Math.round(Math.max(0, Math.min(100, dailyProgress || 0)));
   const progressCircumference = Math.PI * 100;
@@ -104,23 +82,67 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#F6F8FC] text-sm font-medium text-slate-600">
-        Loading...
-      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex min-h-screen flex-col items-center justify-center gap-4 bg-theme-gradient px-6 text-center text-sm font-medium text-[var(--ink)] transition-colors"
+      >
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-[var(--ink)]/20 border-t-[var(--ink)]" />
+        <p>Loading your dashboard...</p>
+      </motion.div>
+    );
+  }
+
+  if (error) {
+    return (
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex min-h-screen flex-col items-center justify-center gap-6 bg-theme-gradient px-6 text-center"
+      >
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+          <AlertCircle className="h-8 w-8 text-red-600" />
+        </div>
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900">Unable to Load Dashboard</h2>
+          <p className="mt-2 text-sm text-slate-600">{error}</p>
+        </div>
+        <Button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="mt-4 rounded-full bg-slate-900 px-6 py-2 text-sm text-white"
+        >
+          Try Again
+        </Button>
+      </motion.div>
     );
   }
 
   return (
     <>
       <div className="page-shell">
-        <div className="screen bg-[#F6F8FC] text-slate-900">
-          <header className="relative overflow-hidden rounded-b-[42px] bg-[linear-gradient(145deg,#103A8A_0%,#3F6BFF_55%,#FF8CC4_100%)] px-6 pb-20 pt-[calc(env(safe-area-inset-top,0px)+2.25rem)] text-white shadow-[0_30px_80px_-30px_rgba(30,64,160,0.55)]">
-            <div className="flex items-start justify-between">
-              <div>
+        <div className="screen text-[var(--ink)]">
+          <motion.header
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="relative overflow-hidden rounded-b-[42px] px-6 pb-20 pt-[calc(env(safe-area-inset-top,0px)+2.25rem)] text-white shadow-[0_30px_80px_-30px_rgba(30,64,160,0.55)]"
+            style={{ backgroundImage: "linear-gradient(145deg,var(--bg-start) 0%,var(--bg-mid) 55%,var(--bg-end) 100%)" }}
+          >
+            {/* Greeting and User Info */}
+            <div className="flex items-start justify-between gap-4">
+              <motion.div variants={fadeInUp} initial="hidden" animate="visible">
                 <p className="text-sm uppercase tracking-[0.3em] text-white/75">{greeting}</p>
                 <h1 className="mt-2 text-3xl font-semibold tracking-tight">{userDisplayName}</h1>
-              </div>
-              <div className="relative flex h-20 w-20 items-center justify-center">
+              </motion.div>
+
+              {/* Daily Progress Ring */}
+              <motion.div
+                variants={scaleIn}
+                initial="hidden"
+                animate="visible"
+                className="relative flex h-20 w-20 shrink-0 items-center justify-center"
+              >
                 <div className="absolute inset-0 rounded-full border border-white/30 bg-white/10 backdrop-blur-md" aria-hidden />
                 <svg viewBox="0 0 120 120" className="h-16 w-16 rotate-[-90deg]">
                   <defs>
@@ -154,20 +176,65 @@ export default function HomePage() {
                   <span className="text-xl font-semibold leading-none">{progressValue}%</span>
                   <span className="mt-1 text-[10px] uppercase tracking-[0.35em] text-white/70">Daily</span>
                 </div>
-              </div>
+              </motion.div>
             </div>
 
-            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-              {QUICK_ACTIONS.map((action) => (
-                <QuickActionPill
+            {/* Mood Streak & Stats */}
+            <motion.div
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
+              transition={{ delay: 0.1 }}
+              className="mt-6 flex gap-4"
+            >
+              {/* Streak Counter */}
+              <div className="flex flex-1 items-center gap-3 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm px-4 py-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+                  <Flame className="h-5 w-5 text-orange-300" aria-hidden />
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/60">Streak</p>
+                  <p className="text-lg font-semibold text-white">{moodStreak.current_streak} days</p>
+                </div>
+              </div>
+
+              {/* Check-ins Counter */}
+              <div className="flex flex-1 items-center gap-3 rounded-2xl border border-white/20 bg-white/10 backdrop-blur-sm px-4 py-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white/20">
+                  <Clock className="h-5 w-5 text-blue-300" aria-hidden />
+                </div>
+                <div className="text-left">
+                  <p className="text-[10px] uppercase tracking-[0.3em] text-white/60">Check-ins</p>
+                  <p className="text-lg font-semibold text-white">{moodStreak.total_check_ins}</p>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Quick Action Pills */}
+            <motion.div
+              variants={fadeInUp}
+              initial="hidden"
+              animate="visible"
+              transition={{ delay: 0.2 }}
+              className="mt-7 flex flex-col gap-3 sm:flex-row"
+            >
+              {QUICK_ACTIONS.map((action, index) => (
+                <motion.div
                   key={action.id}
-                  icon={action.icon}
-                  label={action.label}
-                  onClick={() => setActiveAction(action)}
-                  className="flex-1 min-w-[120px] border-white/30 bg-white/15 text-sm font-semibold tracking-tight text-white/95"
-                />
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 + index * 0.05 }}
+                  className="flex-1"
+                >
+                  <QuickActionPill
+                    icon={action.icon}
+                    label={action.label}
+                    onClick={() => setActiveAction(action)}
+                    className="w-full border-white/30 bg-white/15 text-sm font-semibold tracking-tight text-white/95"
+                  />
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
 
             <div className="pointer-events-none absolute inset-x-0 bottom-[-1px]" aria-hidden>
               <svg viewBox="0 0 375 60" xmlns="http://www.w3.org/2000/svg" className="h-12 w-full text-white/65">
@@ -177,73 +244,129 @@ export default function HomePage() {
                 />
               </svg>
             </div>
-          </header>
+          </motion.header>
 
           <main className="flex-1 space-y-6 px-6 pb-[140px] pt-16">
-            <section aria-labelledby="focus-section" className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 id="focus-section" className="text-lg font-semibold text-slate-800">
-                    Today&apos;s Focus
-                  </h2>
-                  <p className="text-sm text-slate-500">Take a moment to check in.</p>
+            {/* Recent Reflections Section */}
+            {recentReflections.length > 0 && (
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                aria-labelledby="reflections-section"
+                className="space-y-4"
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 id="reflections-section" className="text-lg font-semibold text-slate-800">
+                      Recent Reflections
+                    </h2>
+                    <p className="text-sm text-slate-500">Your latest check-ins</p>
+                  </div>
+                  <NotebookPen className="h-5 w-5 text-[#8CA8FF]" aria-hidden />
                 </div>
-                <Sparkles className="h-5 w-5 text-[#8CA8FF]" aria-hidden />
-              </div>
 
-              <div className="space-y-3">
-                {FOCUS_CARDS.map((card, index) => {
-                  const Icon = card.icon;
-                  return (
-                    <GlassyCard
-                      key={card.id}
-                      className="flex items-center justify-between gap-4 rounded-[24px] border-white/80 bg-white p-4 shadow-[0_25px_80px_-45px_rgba(30,64,160,0.55)]"
-                      style={{ transitionDelay: prefersReducedMotion ? undefined : `${index * 40}ms` }}
+                <div className="space-y-3">
+                  {recentReflections.map((reflection, index) => (
+                    <motion.div
+                      key={reflection.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.4 + index * 0.1 }}
                     >
-                      <div className="flex flex-1 items-center gap-4 text-left">
-                        <span
-                          className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-white shadow-[0_10px_25px_-12px_rgba(15,23,42,0.6)] ${card.accent}`}
-                          aria-hidden
-                        >
-                          <Icon className="h-6 w-6" />
-                        </span>
-                        <div className="space-y-1">
-                          <h3 className="text-base font-semibold text-slate-900">{card.title}</h3>
-                          <p className="text-sm text-slate-500">{card.description}</p>
+                      <GlassyCard className="space-y-3 rounded-[24px] border-white/80 bg-white p-4 shadow-[0_25px_80px_-45px_rgba(30,64,160,0.55)]">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            {reflection.title && (
+                              <h3 className="text-base font-semibold text-slate-900 truncate">{reflection.title}</h3>
+                            )}
+                            <p className="mt-1 text-sm text-slate-600 line-clamp-2">{reflection.content}</p>
+                          </div>
+                          {reflection.mood && (
+                            <div className="flex shrink-0 items-center gap-2 rounded-full bg-slate-100 px-3 py-1">
+                              <span className="text-lg">{reflection.mood}</span>
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      <Button
-                        type="button"
-                        className="rounded-full bg-gradient-to-br from-[#7EA7FF] to-[#FF8DC5] px-4 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-white shadow-sm hover:brightness-110"
-                      >
-                        Start
-                      </Button>
-                    </GlassyCard>
-                  );
-                })}
-              </div>
-            </section>
+                        <p className="text-xs text-slate-400">
+                          {new Date(reflection.created_at).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </GlassyCard>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.section>
+            )}
 
-            <section aria-labelledby="favorites-section" className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h2 id="favorites-section" className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
-                  Favorites
-                </h2>
-                <span className="text-xs font-medium uppercase tracking-[0.3em] text-slate-400">Always here</span>
-              </div>
-              <div className="-mx-2 flex gap-3 overflow-x-auto px-2 pb-1 scrollbar-none">
-                {FAVORITES.map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    className="inline-flex min-w-[9rem] items-center justify-between gap-3 rounded-full bg-white px-5 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 shadow-[0_18px_45px_-40px_rgba(30,64,160,0.55)] transition hover:text-slate-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7EA7FF]"
-                  >
-                    {item}
-                    <span className="h-2 w-2 rounded-full bg-gradient-to-br from-[#7EA7FF] to-[#FF8DC5]" aria-hidden />
-                  </button>
-                ))}
-              </div>
-            </section>
+            {/* Empty State for First Time Users */}
+            {recentReflections.length === 0 && (
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4 }}
+                aria-labelledby="welcome-section"
+                className="space-y-4 rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-slate-100 p-6 text-center"
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80 mx-auto">
+                  <Sparkles className="h-6 w-6 text-[#8CA8FF]" aria-hidden />
+                </div>
+                <div>
+                  <h2 id="welcome-section" className="text-lg font-semibold text-slate-900">
+                    Start Your First Reflection
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-600">
+                    Begin your mindfulness journey by checking in with your thoughts and feelings.
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => setCreateSheetOpen(true)}
+                  className="mx-auto rounded-full bg-gradient-to-br from-[#7EA7FF] to-[#FF8DC5] px-6 py-2 text-sm font-semibold text-white"
+                >
+                  Create Reflection
+                </Button>
+              </motion.section>
+            )}
+
+            {/* Favorites Section */}
+            {favoriteItems.length > 0 && (
+              <motion.section
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                aria-labelledby="favorites-section"
+                className="space-y-3"
+              >
+                <div className="flex items-center justify-between">
+                  <h2 id="favorites-section" className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-500">
+                    Favorites
+                  </h2>
+                  <span className="text-xs font-medium uppercase tracking-[0.3em] text-slate-400">
+                    {favoriteItems.length} saved
+                  </span>
+                </div>
+                <div className="-mx-2 flex gap-3 overflow-x-auto px-2 pb-1 scrollbar-none">
+                  {favoriteItems.map((item, index) => (
+                    <motion.button
+                      key={item.id}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: 0.5 + index * 0.05 }}
+                      type="button"
+                      className="inline-flex min-w-[9rem] items-center justify-between gap-3 rounded-full bg-white px-5 py-3 text-xs font-semibold uppercase tracking-[0.3em] text-slate-500 shadow-[0_18px_45px_-40px_rgba(30,64,160,0.55)] transition hover:text-slate-700 hover:shadow-[0_25px_45px_-35px_rgba(30,64,160,0.55)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7EA7FF]"
+                    >
+                      {item.title || item.content.substring(0, 15)}
+                      <span className="h-2 w-2 shrink-0 rounded-full bg-gradient-to-br from-[#7EA7FF] to-[#FF8DC5]" aria-hidden />
+                    </motion.button>
+                  ))}
+                </div>
+              </motion.section>
+            )}
           </main>
 
           <Fab
@@ -263,10 +386,26 @@ export default function HomePage() {
       >
         {activeAction ? (
           <>
-            <p className="text-sm text-slate-600">{activeAction.prompt}</p>
-            <Button type="button" onClick={() => setActiveAction(null)} className="w-full rounded-full bg-slate-900 text-white">
-              {activeAction.actionLabel}
-            </Button>
+            <div className="space-y-4">
+              <p className="text-sm text-slate-600">{activeAction.prompt}</p>
+              <Button
+                type="button"
+                onClick={() => {
+                  setActiveAction(null);
+                  // Route to appropriate activity
+                  if (activeAction.id === 'reflect') {
+                    router.push("/notes/new?kind=reflection");
+                  } else if (activeAction.id === 'breathe') {
+                    router.push("/tracker/breathe");
+                  } else if (activeAction.id === 'stretch') {
+                    router.push("/tracker/stretch");
+                  }
+                }}
+                className="w-full rounded-full bg-gradient-to-br from-[#7EA7FF] to-[#FF8DC5] text-white hover:shadow-lg transition-shadow"
+              >
+                {activeAction.actionLabel}
+              </Button>
+            </div>
           </>
         ) : null}
       </BottomSheet>
@@ -276,27 +415,38 @@ export default function HomePage() {
         onClose={() => setCreateSheetOpen(false)}
         title="What would you like to do?"
       >
-        <Button
-          type="button"
-          onClick={() => router.push("/notes/new?kind=free")}
-          className="w-full rounded-full bg-slate-900 text-white"
-        >
-          Free Reflection
-        </Button>
-        <Button
-          type="button"
-          onClick={() => router.push("/notes/new?kind=prompt")}
-          className="w-full rounded-full bg-slate-900 text-white"
-        >
-          Choose a Prompt
-        </Button>
-        <Button
-          type="button"
-          onClick={() => router.push("/notes/new?kind=checkin")}
-          className="w-full rounded-full bg-slate-900 text-white"
-        >
-          Check-in
-        </Button>
+        <div className="space-y-3">
+          <Button
+            type="button"
+            onClick={() => {
+              setCreateSheetOpen(false);
+              router.push("/notes/new?kind=free");
+            }}
+            className="w-full rounded-full bg-gradient-to-br from-[#7EA7FF] to-[#FF8DC5] text-white hover:shadow-lg transition-shadow"
+          >
+            Free Reflection
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              setCreateSheetOpen(false);
+              router.push("/notes/new?kind=prompt");
+            }}
+            className="w-full rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+          >
+            Choose a Prompt
+          </Button>
+          <Button
+            type="button"
+            onClick={() => {
+              setCreateSheetOpen(false);
+              router.push("/notes/new?kind=checkin");
+            }}
+            className="w-full rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-colors"
+          >
+            Check-in
+          </Button>
+        </div>
       </BottomSheet>
     </>
   );

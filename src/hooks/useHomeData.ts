@@ -30,6 +30,20 @@ export type UserProfile = {
   theme: string | null;
 };
 
+export type MoodStreak = {
+  current_streak: number;
+  last_check_in_date: string | null;
+  total_check_ins: number;
+};
+
+export type RecentReflection = {
+  id: string;
+  content: string;
+  created_at: string;
+  mood: string | null;
+  title: string | null;
+};
+
 const generateTitle = (kind: string | null, content: string): string => {
   if (kind === "quote") return "Daily Wisdom";
   if (kind === "breath") return "Breathing Exercise";
@@ -51,6 +65,12 @@ export function useHomeData() {
   const [feedItems, setFeedItems] = useState<HomeFeedItem[]>([]);
   const [userFavorites, setUserFavorites] = useState<string[]>([]);
   const [favoriteItems, setFavoriteItems] = useState<FavoriteFeedItem[]>([]);
+  const [moodStreak, setMoodStreak] = useState<MoodStreak>({
+    current_streak: 0,
+    last_check_in_date: null,
+    total_check_ins: 0,
+  });
+  const [recentReflections, setRecentReflections] = useState<RecentReflection[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -133,6 +153,54 @@ export function useHomeData() {
         setFavoriteItems(transformedFavorites);
       }
 
+      // Fetch mood streak data
+      const { data: streakData } = await supabase
+        .from("mood_check_ins")
+        .select("created_at")
+        .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false })
+        .limit(100);
+
+      if (streakData && streakData.length > 0) {
+        const dates = streakData.map((item) => new Date(item.created_at).toDateString());
+        const uniqueDates = [...new Set(dates)];
+        const today = new Date().toDateString();
+
+        let streak = 0;
+        let lastCheckInDate = null;
+
+        for (const date of uniqueDates) {
+          const expectedDate = new Date(today);
+          expectedDate.setDate(expectedDate.getDate() - streak);
+
+          if (date === expectedDate.toDateString()) {
+            streak++;
+            if (streak === 1) lastCheckInDate = date;
+          } else {
+            break;
+          }
+        }
+
+        setMoodStreak({
+          current_streak: streak,
+          last_check_in_date: lastCheckInDate,
+          total_check_ins: uniqueDates.length,
+        });
+      }
+
+      // Fetch recent reflections
+      const { data: reflections } = await supabase
+        .from("notes")
+        .select("id, content, created_at, mood, title")
+        .eq("user_id", session.user.id)
+        .eq("kind", "reflection")
+        .order("created_at", { ascending: false })
+        .limit(3);
+
+      if (reflections) {
+        setRecentReflections(reflections as RecentReflection[]);
+      }
+
     } catch (err) {
       console.error("Error fetching home data:", err);
       setError(err instanceof Error ? err.message : "Failed to load data");
@@ -160,6 +228,8 @@ export function useHomeData() {
     feedItems,
     userFavorites,
     favoriteItems,
+    moodStreak,
+    recentReflections,
     loading,
     error,
     refetch: fetchData,

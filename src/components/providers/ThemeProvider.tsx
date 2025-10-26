@@ -1,6 +1,7 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useState } from "react";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 type Theme = "light" | "dark";
 
@@ -17,32 +18,93 @@ const STORAGE_KEY = "calmscroll-theme";
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("light");
 
+  const applyTheme = useCallback((nextTheme: Theme) => {
+    setThemeState(nextTheme);
+    if (typeof document !== "undefined") {
+      if (nextTheme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+      document.documentElement.setAttribute("data-theme", nextTheme);
+      window.localStorage.setItem(STORAGE_KEY, nextTheme);
+    }
+  }, []);
+
+  const loadThemeFromDatabase = useCallback(async () => {
+    try {
+      const supabase = getSupabaseClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("theme")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (profile?.theme) {
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const dbTheme = profile.theme === "system" ? (prefersDark ? "dark" : "light") : profile.theme;
+          applyTheme(dbTheme as Theme);
+          return;
+        }
+      }
+
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      applyTheme(prefersDark ? "dark" : "light");
+    } catch (error) {
+      console.error("Error loading theme from database:", error);
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      applyTheme(prefersDark ? "dark" : "light");
+    }
+  }, [applyTheme]);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    // First try to get theme from localStorage
     const stored = window.localStorage.getItem(STORAGE_KEY) as Theme | null;
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const resolved = stored ?? (prefersDark ? "dark" : "light");
-    applyTheme(resolved);
-  }, []);
 
-  const applyTheme = (nextTheme: Theme) => {
-    setThemeState(nextTheme);
-    if (typeof document !== "undefined") {
-      document.documentElement.dataset.theme = nextTheme;
-      window.localStorage.setItem(STORAGE_KEY, nextTheme);
+    // If no theme in localStorage, try to get from database
+    if (!stored) {
+      void loadThemeFromDatabase();
+    } else {
+      applyTheme(stored);
+    }
+  }, [applyTheme, loadThemeFromDatabase]);
+
+  const setTheme = async (nextTheme: Theme) => {
+    applyTheme(nextTheme);
+    
+    // Also save to database if user is logged in
+    try {
+      const supabase = getSupabaseClient();
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        await supabase.from("profiles").upsert({
+          id: session.user.id,
+          theme: nextTheme,
+          updated_at: new Date().toISOString(),
+        });
+      }
+    } catch (error) {
+      console.error("Error saving theme to database:", error);
     }
   };
 
   const toggleTheme = () => {
-    applyTheme(theme === "light" ? "dark" : "light");
+    setTheme(theme === "light" ? "dark" : "light");
   };
 
   return (
     <ThemeContext.Provider
       value={{
         theme,
-        setTheme: applyTheme,
+        setTheme,
         toggleTheme,
       }}
     >

@@ -8,8 +8,8 @@ type ButtonSize = "sm" | "md" | "lg";
 
 const VARIANT_CLASSES: Record<ButtonVariant, string> = {
   primary: "bg-[var(--accent)] text-white hover:brightness-110",
-  subtle: "bg-white/80 text-[var(--ink)] hover:bg-white",
-  ghost: "bg-transparent text-[var(--ink-muted)] hover:bg-white/70",
+  subtle: "bg-[var(--card)] text-[var(--ink)] hover:bg-white/80 dark:hover:bg-neutral-800",
+  ghost: "bg-transparent text-[var(--ink-muted)] hover:bg-[var(--card)]/70",
 };
 
 const SIZE_CLASSES: Record<ButtonSize, string> = {
@@ -47,7 +47,7 @@ function UIButtonImpl(
       disabled={disabled || isLoading}
       data-state={isLoading ? "loading" : "idle"}
       className={cn(
-        "inline-flex items-center justify-center rounded-2xl font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+        "inline-flex items-center justify-center rounded-2xl font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2",
         VARIANT_CLASSES[variant],
         SIZE_CLASSES[size],
         className

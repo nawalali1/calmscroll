@@ -19,7 +19,8 @@ export const Fab = forwardRef<HTMLButtonElement, FabProps>(function Fab(
       type="button"
       whileTap={{ scale: 0.95 }}
       className={cn(
-        "inline-flex h-14 w-14 items-center justify-center rounded-full border border-white/35 bg-[linear-gradient(135deg,#1D4F91,#5282FF)] text-white shadow-lg backdrop-blur-xl transition",
+        "inline-flex h-14 w-14 items-center justify-center rounded-full border text-white shadow-lg backdrop-blur-xl transition",
+        "border-[var(--card-border)] bg-[linear-gradient(135deg,var(--bg-start),var(--bg-end))]",
         "hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white",
         className
       )}

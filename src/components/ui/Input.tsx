@@ -32,7 +32,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         <label
           htmlFor={inputId}
           className={cn(
-            "text-xs font-semibold uppercase tracking-[0.22em] text-slate-700",
+            "text-xs font-semibold uppercase tracking-[0.22em] text-[var(--ink-muted)]",
             labelClassName
           )}
         >
@@ -44,8 +44,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         id={inputId}
         name={name}
         className={cn(
-          "min-h-[48px] w-full rounded-2xl border border-white/40 bg-white/15 px-4 py-3 text-base text-slate-900 shadow-[inset_0_1px_0_rgba(255,255,255,0.45)] transition placeholder:text-slate-600/60 focus:border-white/70 focus:bg-white/25 focus:outline-none focus:ring-2 focus:ring-white/70",
-          error && "border-rose-300/80 focus:border-rose-300 focus:ring-rose-200/60",
+          "min-h-[48px] w-full rounded-2xl border px-4 py-3 text-base transition",
+          "border-[var(--card-border)] bg-[var(--card)] text-[var(--ink)] placeholder:text-[var(--ink-muted)]/70",
+          "focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40",
+          error && "border-rose-300 focus:border-rose-300 focus:ring-rose-200",
           className
         )}
         aria-invalid={Boolean(error)}
@@ -56,7 +58,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         {error ? (
           <p className="text-xs font-medium text-rose-500">{error}</p>
         ) : helperText ? (
-          <p className="text-xs text-slate-500">{helperText}</p>
+          <p className="text-xs text-[var(--ink-muted)]">{helperText}</p>
         ) : (
           messageSlot || null
         )}

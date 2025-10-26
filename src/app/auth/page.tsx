@@ -83,7 +83,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-svh items-center justify-center overflow-hidden bg-[linear-gradient(165deg,#0B3B64_0%,#365DFF_55%,#FF8CC4_100%)] px-4 py-10 text-white">
+    <div
+      className="relative flex min-h-svh items-center justify-center overflow-hidden px-4 py-10 text-white"
+      style={{ backgroundImage: "linear-gradient(165deg,var(--bg-start) 0%,var(--bg-mid) 55%,var(--bg-end) 100%)" }}
+    >
       <div className="absolute inset-0">
         <div className="absolute left-[-8%] top-[-12%] h-60 w-60 rounded-full bg-[#7EA7FF]/25 blur-3xl" aria-hidden />
         <div className="absolute right-[-12%] top-[18%] h-52 w-52 rounded-full bg-[#B38BFF]/25 blur-3xl" aria-hidden />

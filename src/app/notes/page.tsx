@@ -136,22 +136,22 @@ export default function NotesPage() {
     <>
         <div className="page-shell">
           <div className="screen">
-            <header className="bg-calm-gradient px-6 pt-16 pb-10 text-slate-900 dark:text-white">
+            <header className="bg-calm-gradient px-6 pt-16 pb-10 text-[var(--ink)]">
               <h1 className="text-3xl font-semibold tracking-tight text-center">My Reflections</h1>
-              <p className="mt-2 text-center text-sm text-slate-600 dark:text-slate-300">
+              <p className="mt-2 text-center text-sm text-[var(--ink-muted)]">
               Capture mindful notes and revisit what grounded you today.
             </p>
             <div className="relative mx-auto mt-6 max-w-md">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden />
               <input
                 value={query}
                 onChange={(event) => setQuery(event.currentTarget.value)}
                 placeholder="Search reflections..."
-                className="w-full rounded-full border border-white/40 bg-white/80 px-11 py-3 text-sm text-slate-900 shadow-inner focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/15 dark:bg-white/10 dark:text-white"
+                className="w-full rounded-full border border-[var(--card-border)] bg-[var(--card)] px-11 py-3 text-sm text-[var(--ink)] shadow-inner shadow-black/5 transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
               />
             </div>
             {loading ? (
-              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-300" aria-live="polite">
+              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-[var(--ink-muted)]" aria-live="polite">
                 <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                 <span>Loading reflections…</span>
               </div>
@@ -169,26 +169,26 @@ export default function NotesPage() {
           <main className="flex-1 overflow-y-auto px-6 pb-[140px]">
             {loading ? (
               <div className="space-y-3 pt-6" aria-live="polite">
-                <div className="flex items-center justify-center gap-2 text-sm text-slate-500 dark:text-slate-300">
+                <div className="flex items-center justify-center gap-2 text-sm text-[var(--ink-muted)]">
                   <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
                   <span>Fetching your reflections…</span>
                 </div>
                 {Array.from({ length: 4 }).map((_, index) => (
                   <GlassyCard
                     key={index}
-                    className="h-32 animate-pulse rounded-[26px] bg-white/70 dark:bg-white/10"
+                    className="h-32 animate-pulse rounded-[26px] bg-[var(--card)]/70"
                   />
                 ))}
               </div>
             ) : displayNotes.length === 0 ? (
-              <div className="pt-12 text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white/70 text-indigo-500 shadow dark:bg-white/10">
+              <div className="pt-12 text-center text-[var(--ink)]">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--card)] text-[var(--accent)] shadow">
                   <Sparkles className="h-8 w-8" aria-hidden />
                 </div>
-                <h2 className="mt-4 text-lg font-semibold text-slate-800 dark:text-white">
+                <h2 className="mt-4 text-lg font-semibold">
                   No reflections yet
                 </h2>
-                <p className="mt-2 text-sm text-slate-500 dark:text-slate-300">
+                <p className="mt-2 text-sm text-[var(--ink-muted)]">
                   Start a new note to capture how you feel right now.
                 </p>
               </div>
@@ -197,7 +197,7 @@ export default function NotesPage() {
                 {displayNotes.map((note) => (
                   <GlassyCard
                     key={note.id}
-                    className="group flex flex-col gap-4 rounded-[26px] border border-white/80 bg-white p-5 text-left shadow-[0_25px_80px_-45px_rgba(30,64,160,0.45)] dark:border-white/10 dark:bg-white/10"
+                    className="group flex flex-col gap-4 rounded-[26px] border border-[var(--card-border)] bg-[var(--card)] p-5 text-left shadow-[0_25px_80px_-45px_rgba(30,64,160,0.25)]"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div
@@ -212,16 +212,16 @@ export default function NotesPage() {
                         }}
                         className="flex-1 cursor-pointer"
                       >
-                        <span className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+                        <span className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--ink-muted)]">
                           {note.mood ? `Mood · ${note.mood}` : "Reflection"}
                         </span>
-                        <h3 className="mt-2 text-base font-semibold text-slate-800 dark:text-white">
+                        <h3 className="mt-2 text-base font-semibold text-[var(--ink)]">
                           {note.title?.trim() || "Untitled reflection"}
                         </h3>
-                        <p className="mt-2 line-clamp-3 text-sm text-slate-500 dark:text-slate-300">
+                        <p className="mt-2 line-clamp-3 text-sm text-[var(--ink-muted)]">
                           {note.content}
                         </p>
-                        <p className="mt-3 text-xs font-medium uppercase tracking-[0.3em] text-slate-400">
+                        <p className="mt-3 text-xs font-medium uppercase tracking-[0.3em] text-[var(--ink-muted)]">
                           {formatTimestamp(note.updated_at)}
                         </p>
                       </div>
@@ -273,7 +273,7 @@ export default function NotesPage() {
         description="Capture what’s on your mind. Titles and mood selections are optional."
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <label className="block text-sm font-semibold text-[var(--ink)]">
             Title
             <input
               value={formState.title}
@@ -282,11 +282,11 @@ export default function NotesPage() {
                 setFormState((prev) => ({ ...prev, title: value }));
               }}
               placeholder="Today I noticed..."
-              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-base text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
+              className="mt-2 w-full rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-2 text-base text-[var(--ink)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
             />
           </label>
 
-          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <label className="block text-sm font-semibold text-[var(--ink)]">
             Mood
             <select
               value={formState.mood}
@@ -294,7 +294,7 @@ export default function NotesPage() {
                 const { value } = event.currentTarget;
                 setFormState((prev) => ({ ...prev, mood: value }));
               }}
-              className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-base text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
+              className="mt-2 w-full rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-2 text-base text-[var(--ink)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
             >
               <option value="">No mood selected</option>
               {MOOD_OPTIONS.map((option) => (
@@ -305,7 +305,7 @@ export default function NotesPage() {
             </select>
           </label>
 
-          <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200">
+        <label className="block text-sm font-semibold text-[var(--ink)]">
             Reflection
             <textarea
               value={formState.content}
@@ -318,7 +318,7 @@ export default function NotesPage() {
               }}
               placeholder="Let your thoughts flow..."
               rows={5}
-              className="mt-2 w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-base text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-200 dark:border-white/20 dark:bg-white/10 dark:text-white"
+              className="mt-2 w-full resize-none rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-2 text-base text-[var(--ink)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
             />
           </label>
 
@@ -329,7 +329,7 @@ export default function NotesPage() {
               type="button"
               onClick={resetComposer}
               disabled={isSubmitting}
-              className="rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7EA7FF] disabled:opacity-60 dark:border-white/20 dark:text-slate-200 dark:hover:bg-white/10"
+              className="rounded-full border border-[var(--card-border)] px-5 py-2 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--card)]/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:opacity-60"
             >
               Cancel
             </button>

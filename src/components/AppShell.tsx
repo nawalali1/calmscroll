@@ -9,11 +9,14 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   const onAuthRoute = pathname?.startsWith("/auth");
+  const gradientBackground = {
+    backgroundImage: "linear-gradient(160deg,var(--bg-start) 0%,var(--bg-mid) 55%,var(--bg-end) 100%)",
+  };
 
   if (loading) {
     return (
-      <div className="min-h-svh flex items-center justify-center bg-slate-50">
-        <div className="text-slate-500 text-sm">Loading…</div>
+      <div className="min-h-svh flex items-center justify-center bg-theme-gradient text-[var(--ink)] transition-colors" style={gradientBackground}>
+        <div className="text-sm text-[var(--ink-muted)]">Loading…</div>
       </div>
     );
   }
@@ -24,7 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-svh bg-[#F3F6FB] py-10">
+    <div className="min-h-svh bg-theme-gradient py-10 text-[var(--ink)] transition-colors" style={gradientBackground}>
       <main className="mx-auto flex w-full max-w-[460px] justify-center px-4">{children}</main>
     </div>
   );
