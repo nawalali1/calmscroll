@@ -6,7 +6,7 @@ import { METRICS_FIELDS, DEFAULT_METRICS } from "@/config/constants";
 export type MetricsRow = {
   id?: string;
   user_id: string;
-  day_key: string;
+  date_key: string;
   minutes_read: number;
   cards_read: number;
   tasks_done: number;
@@ -23,7 +23,7 @@ export async function fetchMetricsRow(userId: string, dayKey: string): Promise<M
     .from("metrics")
     .select(METRICS_FIELDS)
     .eq("user_id", userId)
-    .eq("day_key", dayKey)
+    .eq("date_key", dayKey)
     .maybeSingle();
 
   if (error) {
@@ -38,7 +38,7 @@ export async function createMetricsRow(userId: string, dayKey: string): Promise<
   const supabase = getSupabaseClient();
   const defaults: MetricsRow = {
     user_id: userId,
-    day_key: dayKey,
+    date_key: dayKey,
     minutes_read: DEFAULT_METRICS.MINUTES_READ,
     cards_read: DEFAULT_METRICS.CARDS_READ,
     tasks_done: DEFAULT_METRICS.TASKS_DONE,
@@ -70,7 +70,7 @@ export async function ensureTodayMetrics(userId: string, dayKey: string = todayK
       .from("metrics")
       .update({ open_count: (existing.open_count ?? 0) + 1 })
       .eq("user_id", userId)
-      .eq("day_key", dayKey)
+      .eq("date_key", dayKey)
       .select(METRICS_FIELDS)
       .single();
 
@@ -95,7 +95,7 @@ export async function updateMetrics(
     .from("metrics")
     .update(patch)
     .eq("user_id", userId)
-    .eq("day_key", dayKey)
+    .eq("date_key", dayKey)
     .select(METRICS_FIELDS)
     .single();
 
