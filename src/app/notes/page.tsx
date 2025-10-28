@@ -1,247 +1,369 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Search, Trash2, Pencil, Sparkles } from "lucide-react";
+import { Loader2, Search, Trash2, Pencil, Plus, Sparkles, X, ChevronDown } from "lucide-react";
 import GlassyCard from "@/components/GlassyCard";
 import IconButton from "@/components/IconButton";
 import BottomSheet from "@/components/BottomSheet";
 import BottomNav from "@/components/BottomNav";
 import { useNotes, type Note } from "@/hooks/useNotes";
+import { useTheme } from "@/components/providers/ThemeProvider";
 
-const MOOD_OPTIONS = ["Calm", "Grounded", "Grateful", "Focused", "Reflective"];
+const MOOD_OPTIONS = ["Calm", "Grounded", "Grateful", "Focused", "Reflective"] as const;
+type SortMode = "recent" | "az";
 
-const formatTimestamp = (value: string) => {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  const now = new Date();
-  const sameDay =
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate();
-  const dayLabel = sameDay
-    ? "Today"
-    : date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
-  const timeLabel = date.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  return `${dayLabel}, ${timeLabel}`;
-};
-
-type FormState = {
-  title: string;
-  content: string;
-  mood: string;
-};
-
-const initialForm: FormState = {
-  title: "",
-  content: "",
-  mood: "",
+const formatTime = (value: string): string => {
+  try {
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "—";
+    const today = new Date();
+    const sameDay = d.toDateString() === today.toDateString();
+    const day = sameDay
+      ? "Today"
+      : d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+    const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    return `${day}, ${time}`;
+  } catch {
+    return "—";
+  }
 };
 
 export default function NotesPage() {
   const router = useRouter();
-  const {
-    notes,
-    loading,
-    error,
-    createNote,
-    updateNote,
-    deleteNote,
-    refetch,
-  } = useNotes();
+  useTheme(); // tokens already applied globally
 
+  const { notes, loading, error, createNote, updateNote, deleteNote, refetch } = useNotes();
+
+  // search and sort
+  const [queryInput, setQueryInput] = useState("");
   const [query, setQuery] = useState("");
+  const [sort, setSort] = useState<SortMode>("recent");
+
+  // composer
   const [composerOpen, setComposerOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [formState, setFormState] = useState<FormState>(initialForm);
-  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
-  const [localError, setLocalError] = useState<string | null>(null);
+  const [form, setForm] = useState({ title: "", content: "", mood: "" });
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [composerError, setComposerError] = useState<string | null>(null);
 
-  const displayNotes = useMemo(() => {
-    const term = query.trim().toLowerCase();
-    if (!term) return notes;
-    return notes.filter((note) => {
-      const titleMatch = (note.title ?? "").toLowerCase().includes(term);
-      const contentMatch = note.content.toLowerCase().includes(term);
-      const moodMatch = (note.mood ?? "").toLowerCase().includes(term);
-      return titleMatch || contentMatch || moodMatch;
-    });
-  }, [notes, query]);
+  // delete
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-  const resetComposer = () => {
+  // feedback
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [pageError, setPageError] = useState<string | null>(null);
+
+  // debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setQuery(queryInput.trim()), 250);
+    return () => clearTimeout(t);
+  }, [queryInput]);
+
+  // success auto hide
+  useEffect(() => {
+    if (!successMsg) return;
+    const t = setTimeout(() => setSuccessMsg(null), 1800);
+    return () => clearTimeout(t);
+  }, [successMsg]);
+
+  // filtered list
+  const filteredNotes = useMemo(() => {
+    let list = notes;
+    if (query) {
+      const term = query.toLowerCase();
+      list = list.filter(
+        n =>
+          n.title?.toLowerCase().includes(term) ||
+          n.content.toLowerCase().includes(term) ||
+          n.mood?.toLowerCase().includes(term)
+      );
+    }
+    if (sort === "recent") {
+      list = [...list].sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      );
+    } else {
+      list = [...list].sort((a, b) => (a.title ?? "").localeCompare(b.title ?? ""));
+    }
+    return list;
+  }, [notes, query, sort]);
+
+  // composer handlers
+  const openNew = useCallback(() => {
+    setEditingId(null);
+    setForm({ title: "", content: "", mood: "" });
+    setComposerError(null);
+    setComposerOpen(true);
+  }, []);
+
+  const openEdit = useCallback((note: Note) => {
+    setEditingId(note.id);
+    setForm({ title: note.title ?? "", content: note.content, mood: note.mood ?? "" });
+    setComposerError(null);
+    setComposerOpen(true);
+  }, []);
+
+  const resetComposer = useCallback(() => {
     setComposerOpen(false);
-    setEditingNoteId(null);
-    setFormState(initialForm);
-    setLocalError(null);
-  };
+    setEditingId(null);
+    setForm({ title: "", content: "", mood: "" });
+    setComposerError(null);
+  }, []);
 
-  const openComposerForNew = () => {
-    setEditingNoteId(null);
-    setFormState(initialForm);
-    setComposerOpen(true);
-  };
-
-  const openComposerForEdit = (note: Note) => {
-    setEditingNoteId(note.id);
-    setFormState({
-      title: note.title ?? "",
-      content: note.content,
-      mood: note.mood ?? "",
-    });
-    setComposerOpen(true);
-  };
-
-  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (!formState.content.trim()) {
-      setLocalError("Reflection cannot be empty.");
-      return;
-    }
-    setIsSubmitting(true);
-    setLocalError(null);
-    try {
-      if (editingNoteId) {
-        await updateNote(editingNoteId, {
-          title: formState.title.trim() || null,
-          content: formState.content.trim(),
-          mood: formState.mood.trim() || null,
-        });
-      } else {
-        await createNote({
-          title: formState.title.trim() || undefined,
-          content: formState.content.trim(),
-          mood: formState.mood.trim() || undefined,
-        });
+  const saveNote = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const payload = {
+        title: form.title.trim(),
+        content: form.content.trim(),
+        mood: form.mood.trim(),
+      };
+      if (!payload.content) {
+        setComposerError("Reflection cannot be empty.");
+        return;
       }
-      resetComposer();
+      setIsSaving(true);
+      setComposerError(null);
+      try {
+        if (editingId) {
+          await updateNote(editingId, {
+            title: payload.title || null,
+            content: payload.content,
+            mood: payload.mood || null,
+          });
+          setSuccessMsg("Reflection updated.");
+        } else {
+          await createNote({
+            title: payload.title || undefined,
+            content: payload.content,
+            mood: payload.mood || undefined,
+          });
+          setSuccessMsg("Reflection saved.");
+        }
+        resetComposer();
+      } catch (err) {
+        console.error(err);
+        setComposerError(err instanceof Error ? err.message : "Could not save your note.");
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [editingId, form, updateNote, createNote, resetComposer]
+  );
+
+  // delete
+  const confirmDelete = useCallback(async () => {
+    if (!deleteId) return;
+    setIsDeleting(true);
+    setPageError(null);
+    try {
+      await deleteNote(deleteId);
+      setSuccessMsg("Reflection deleted.");
+      setDeleteId(null);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to save note.";
-      setLocalError(message);
+      console.error(err);
+      setPageError(err instanceof Error ? err.message : "Failed to delete note.");
     } finally {
-      setIsSubmitting(false);
+      setIsDeleting(false);
     }
-  };
+  }, [deleteId, deleteNote]);
 
-  const handleDelete = async (id: string) => {
-    const confirmed = window.confirm("Delete this reflection?");
-    if (!confirmed) return;
-    await deleteNote(id);
-  };
+  // dialog focus trap
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!deleteId || !dialogRef.current) return;
+    const el = dialogRef.current;
+    const focusable = el.querySelectorAll<HTMLElement>(
+      'button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])'
+    );
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      if (document.activeElement === last && !e.shiftKey) {
+        e.preventDefault();
+        first?.focus();
+      } else if (document.activeElement === first && e.shiftKey) {
+        e.preventDefault();
+        last?.focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    (first || el).focus();
+    return () => document.removeEventListener("keydown", onKey);
+  }, [deleteId]);
 
-  const handleOpenDetail = (note: Note) => {
-    router.push(`/notes/${note.id}`);
-  };
+  // ids
+  const deleteTitleId = "delete-title";
+  const deleteDescId = "delete-desc";
 
   return (
     <>
-        <div className="page-shell">
-          <div className="screen">
-            <header className="bg-calm-gradient px-6 pt-16 pb-10 text-[var(--ink)]">
-              <h1 className="text-3xl font-semibold tracking-tight text-center">My Reflections</h1>
-              <p className="mt-2 text-center text-sm text-[var(--ink-muted)]">
-              Capture mindful notes and revisit what grounded you today.
+      {/* App background just to center the phone frame */}
+      <div className="min-h-screen bg-[var(--bg)] flex items-start sm:items-center justify-center py-4">
+        {/* Mobile frame */}
+        <div className="w-full max-w-[420px] rounded-[28px] border border-[var(--card-border)] bg-[var(--surface,theme(colors.white))] shadow-xl overflow-hidden">
+          {/* Status bar notch space */}
+          <div className="h-3 bg-[var(--bg)]" />
+
+          {/* Sticky header inside device */}
+          <header className="sticky top-0 z-20 bg-[var(--bg)]/90 backdrop-blur supports-[backdrop-filter]:backdrop-blur px-4 pt-4 pb-3 border-b border-[var(--card-border)]/70">
+            <h1 className="text-xl font-semibold text-[var(--ink)] text-center">My Reflections</h1>
+            <p className="mt-1 text-xs text-[var(--ink-muted)] text-center">
+              Write, reflect, and reconnect with your thoughts.
             </p>
-            <div className="relative mx-auto mt-6 max-w-md">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" aria-hidden />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.currentTarget.value)}
-                placeholder="Search reflections..."
-                className="w-full rounded-full border border-[var(--card-border)] bg-[var(--card)] px-11 py-3 text-sm text-[var(--ink)] shadow-inner shadow-black/5 transition placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/40"
-              />
+
+            {/* Search and sort */}
+            <div className="mt-3 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--ink-muted)]" />
+                <input
+                  value={queryInput}
+                  onChange={(e) => setQueryInput(e.target.value)}
+                  placeholder="Search reflections…"
+                  aria-label="Search reflections"
+                  className="w-full rounded-full bg-[var(--card)] border border-[var(--card-border)] px-9 py-2 text-sm text-[var(--ink)] placeholder:text-[var(--ink-muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/30 outline-none"
+                />
+                {queryInput && (
+                  <button
+                    type="button"
+                    onClick={() => setQueryInput("")}
+                    aria-label="Clear search"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+
+              <div className="flex rounded-full border border-[var(--card-border)] bg-[var(--card)] p-1">
+                {(["recent", "az"] as const).map(key => {
+                  const active = sort === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() => setSort(key)}
+                      aria-pressed={active}
+                      className={`min-w-[4.5rem] rounded-full px-3 py-1.5 text-xs font-medium transition ${
+                        active
+                          ? "bg-[var(--accent)] text-white"
+                          : "text-[var(--ink-muted)] hover:text-[var(--ink)]"
+                      }`}
+                    >
+                      {key === "recent" ? "Recent" : "A–Z"}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            {loading ? (
-              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-[var(--ink-muted)]" aria-live="polite">
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+
+            {/* header feedback */}
+            {loading && (
+              <div className="mt-2 flex items-center justify-center gap-2 text-xs text-[var(--ink-muted)]">
+                <Loader2 className="h-4 w-4 animate-spin" />
                 <span>Loading reflections…</span>
               </div>
-            ) : null}
-            {error ? (
-              <p className="mt-3 text-center text-sm text-rose-500">
-                {error}{" "}
-                <button className="underline" type="button" onClick={() => refetch()}>
+            )}
+            {error && !loading && (
+              <div className="mt-2 text-center">
+                <p className="text-xs text-rose-500">{error}</p>
+                <button
+                  type="button"
+                  onClick={refetch}
+                  className="mt-1 text-xs font-semibold text-[var(--accent)] hover:underline"
+                >
                   Try again
                 </button>
-              </p>
-            ) : null}
+              </div>
+            )}
           </header>
 
-          <main className="flex-1 overflow-y-auto px-6 pb-[140px]">
-            {loading ? (
-              <div className="space-y-3 pt-6" aria-live="polite">
-                <div className="flex items-center justify-center gap-2 text-sm text-[var(--ink-muted)]">
-                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden />
-                  <span>Fetching your reflections…</span>
-                </div>
-                {Array.from({ length: 4 }).map((_, index) => (
+          {/* Success toast pinned inside frame */}
+          {successMsg && (
+            <div aria-live="polite" aria-atomic="true" className="px-4 pt-3">
+              <div className="mx-auto w-full rounded-full bg-[var(--card)] border border-[var(--card-border)] px-3 py-2 text-xs text-[var(--ink)] text-center">
+                {successMsg}
+              </div>
+            </div>
+          )}
+
+          {/* Content area */}
+          <main className="px-4 pb-[104px] pt-3">
+            {/* skeletons */}
+            {loading && (
+              <div className="space-y-3">
+                {Array.from({ length: 5 }).map((_, i) => (
                   <GlassyCard
-                    key={index}
-                    className="h-32 animate-pulse rounded-[26px] bg-[var(--card)]/70"
+                    key={`sk-${i}`}
+                    className="h-24 animate-pulse rounded-2xl bg-[var(--card)]/60"
                   />
                 ))}
               </div>
-            ) : displayNotes.length === 0 ? (
-              <div className="pt-12 text-center text-[var(--ink)]">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[var(--card)] text-[var(--accent)] shadow">
-                  <Sparkles className="h-8 w-8" aria-hidden />
+            )}
+
+            {/* empty */}
+            {!loading && filteredNotes.length === 0 && (
+              <div className="pt-10 text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--card)] text-[var(--accent)] shadow">
+                  <Sparkles className="h-7 w-7" />
                 </div>
-                <h2 className="mt-4 text-lg font-semibold">
-                  No reflections yet
-                </h2>
-                <p className="mt-2 text-sm text-[var(--ink-muted)]">
-                  Start a new note to capture how you feel right now.
+                <h2 className="text-base font-semibold">No notes {query ? "match" : "yet"}</h2>
+                <p className="mt-1 text-xs text-[var(--ink-muted)]">
+                  {query ? "Try a different search term." : "Start your first mindful reflection."}
                 </p>
+                {!query && (
+                  <button
+                    type="button"
+                    onClick={openNew}
+                    className="mt-4 rounded-full bg-[var(--accent)] px-4 py-2 text-xs font-semibold text-white shadow-sm hover:brightness-110 active:scale-95"
+                  >
+                    New reflection
+                  </button>
+                )}
               </div>
-            ) : (
-              <div className="space-y-3 pt-6">
-                {displayNotes.map((note) => (
+            )}
+
+            {/* one-column mobile list */}
+            {!loading && filteredNotes.length > 0 && (
+              <div className="space-y-3">
+                {filteredNotes.map(note => (
                   <GlassyCard
                     key={note.id}
-                    className="group flex flex-col gap-4 rounded-[26px] border border-[var(--card-border)] bg-[var(--card)] p-5 text-left shadow-[0_25px_80px_-45px_rgba(30,64,160,0.25)]"
+                    className="group border border-[var(--card-border)] bg-[var(--card)]/60 backdrop-blur-xl p-4 rounded-2xl transition hover:bg-[var(--card)]/75"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => handleOpenDetail(note)}
-                        onKeyDown={(event) => {
-                          if (event.key === "Enter" || event.key === " ") {
-                            event.preventDefault();
-                            handleOpenDetail(note);
-                          }
-                        }}
-                        className="flex-1 cursor-pointer"
-                      >
-                        <span className="text-xs font-semibold uppercase tracking-[0.3em] text-[var(--ink-muted)]">
-                          {note.mood ? `Mood · ${note.mood}` : "Reflection"}
-                        </span>
-                        <h3 className="mt-2 text-base font-semibold text-[var(--ink)]">
-                          {note.title?.trim() || "Untitled reflection"}
-                        </h3>
-                        <p className="mt-2 line-clamp-3 text-sm text-[var(--ink-muted)]">
-                          {note.content}
-                        </p>
-                        <p className="mt-3 text-xs font-medium uppercase tracking-[0.3em] text-[var(--ink-muted)]">
-                          {formatTimestamp(note.updated_at)}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
+                    <div onClick={() => router.push(`/notes/${note.id}`)} className="cursor-pointer">
+                      <p className="text-[10px] uppercase tracking-[0.25em] text-[var(--ink-muted)] font-medium">
+                        {note.mood ? `Mood · ${note.mood}` : "Reflection"}
+                      </p>
+                      <h3 className="mt-1 text-base font-semibold break-words">
+                        {note.title?.trim() || "Untitled reflection"}
+                      </h3>
+                      <p className="mt-1 text-sm text-[var(--ink-muted)] line-clamp-4">
+                        {note.content}
+                      </p>
+                    </div>
+
+                    <div className="my-3 border-t border-[var(--card-border)]/60" />
+
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] uppercase tracking-[0.2em] text-[var(--ink-muted)]">
+                        {formatTime(note.updated_at)}
+                      </p>
+                      <div className="flex gap-2">
                         <IconButton
-                          aria-label="Edit reflection"
                           icon={Pencil}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            openComposerForEdit(note);
-                          }}
+                          aria-label="Edit reflection"
+                          onClick={() => openEdit(note)}
+                          className="text-[var(--ink-muted)] hover:text-[var(--accent)]"
                         />
                         <IconButton
-                          aria-label="Delete reflection"
                           icon={Trash2}
-                          className="text-rose-500 hover:text-rose-600"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleDelete(note.id);
-                          }}
+                          aria-label="Delete reflection"
+                          onClick={() => setDeleteId(note.id)}
+                          className="text-[var(--ink-muted)] hover:text-rose-500"
                         />
                       </div>
                     </div>
@@ -249,98 +371,158 @@ export default function NotesPage() {
                 ))}
               </div>
             )}
-
           </main>
 
+          {/* Bottom nav pinned inside frame */}
+          <BottomNav />
+
+          {/* FAB positioned above BottomNav safely */}
           {!composerOpen && (
             <button
-              onClick={openComposerForNew}
-              className="absolute bottom-[calc(env(safe-area-inset-bottom,0px)+116px)] right-6 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-[#7EA7FF] via-[#9C8BFF] to-[#FF8DC5] text-3xl font-bold text-white shadow-[0_25px_45px_-25px_rgba(255,142,200,0.6)] transition hover:scale-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              type="button"
+              onClick={openNew}
               aria-label="Add reflection"
+              className="absolute right-4 bottom-[88px] flex h-12 w-12 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-lg transition hover:brightness-110 active:scale-95"
             >
-              +
+              <Plus className="h-5 w-5" />
             </button>
           )}
-
-          <BottomNav />
         </div>
       </div>
 
+      {/* Delete dialog with proper semantics and a tiny focus trap */}
+      {deleteId && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center bg-black/40 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={deleteTitleId}
+          aria-describedby={deleteDescId}
+        >
+          <div
+            ref={dialogRef}
+            className="w-full max-w-[420px] rounded-t-3xl sm:rounded-2xl bg-[var(--card)] p-6 mx-auto shadow-2xl outline-none"
+          >
+            <h2 id={deleteTitleId} className="text-lg font-semibold">
+              Delete reflection
+            </h2>
+            <p id={deleteDescId} className="mt-2 text-sm text-[var(--ink-muted)]">
+              This action cannot be undone.
+            </p>
+
+            <div className="mt-6 flex gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteId(null)}
+                disabled={isDeleting}
+                className="flex-1 rounded-full border border-[var(--card-border)] px-4 py-2 text-sm font-semibold hover:bg-[var(--card)]/80 disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex-1 rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-600 disabled:opacity-60 active:scale-95"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin inline-block mr-2" />
+                    Deleting…
+                  </>
+                ) : (
+                  "Delete"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Composer stays as a bottom sheet inside the app */}
       <BottomSheet
         open={composerOpen}
         onClose={resetComposer}
-        title={editingNoteId ? "Edit reflection" : "New reflection"}
-        description="Capture what’s on your mind. Titles and mood selections are optional."
+        title={editingId ? "Edit reflection" : "New reflection"}
+        description="Capture what is on your mind. Title and mood are optional."
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-        <label className="block text-sm font-semibold text-[var(--ink)]">
-            Title
+        <form onSubmit={saveNote} className="space-y-4">
+          <div>
+            <label htmlFor="title-input" className="block text-sm font-medium">
+              Title
+            </label>
             <input
-              value={formState.title}
-              onChange={(event) => {
-                const { value } = event.currentTarget;
-                setFormState((prev) => ({ ...prev, title: value }));
-              }}
-              placeholder="Today I noticed..."
-              className="mt-2 w-full rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-2 text-base text-[var(--ink)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
+              id="title-input"
+              value={form.title}
+              onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
+              placeholder="Today I felt…"
+              maxLength={200}
+              className="mt-2 w-full rounded-xl bg-[var(--card)] border border-[var(--card-border)] px-3 py-2 text-sm placeholder:text-[var(--ink-muted)] focus:ring-2 focus:ring-[var(--accent)]/30 outline-none"
             />
-          </label>
+            <p className="mt-1 text-[11px] text-[var(--ink-muted)] text-right">{form.title.length}/200</p>
+          </div>
 
-        <label className="block text-sm font-semibold text-[var(--ink)]">
-            Mood
-            <select
-              value={formState.mood}
-              onChange={(event) => {
-                const { value } = event.currentTarget;
-                setFormState((prev) => ({ ...prev, mood: value }));
-              }}
-              className="mt-2 w-full rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-2 text-base text-[var(--ink)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
-            >
-              <option value="">No mood selected</option>
-              {MOOD_OPTIONS.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div>
+            <label htmlFor="mood-select" className="block text-sm font-medium">
+              Mood
+            </label>
+            <div className="relative mt-2">
+              <select
+                id="mood-select"
+                value={form.mood}
+                onChange={e => setForm(p => ({ ...p, mood: e.target.value }))}
+                className="w-full appearance-none rounded-xl bg-[var(--card)] border border-[var(--card-border)] px-3 py-2 pr-9 text-sm focus:ring-2 focus:ring-[var(--accent)]/30 outline-none"
+              >
+                <option value="">No mood selected</option>
+                {MOOD_OPTIONS.map(m => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--ink-muted)]" />
+            </div>
+          </div>
 
-        <label className="block text-sm font-semibold text-[var(--ink)]">
-            Reflection
+          <div>
+            <label htmlFor="content-input" className="block text-sm font-medium">
+              Reflection
+            </label>
             <textarea
-              value={formState.content}
-              onChange={(event) => {
-                const { value } = event.currentTarget;
-                setFormState((prev) => ({
-                  ...prev,
-                  content: value,
-                }));
-              }}
-              placeholder="Let your thoughts flow..."
-              rows={5}
-              className="mt-2 w-full resize-none rounded-xl border border-[var(--card-border)] bg-[var(--card)] px-3 py-2 text-base text-[var(--ink)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]/30"
+              id="content-input"
+              value={form.content}
+              onChange={e => setForm(p => ({ ...p, content: e.target.value }))}
+              placeholder="Let your thoughts flow…"
+              rows={6}
+              maxLength={5000}
+              className="mt-2 w-full resize-none rounded-xl bg-[var(--card)] border border-[var(--card-border)] px-3 py-2 text-sm placeholder:text-[var(--ink-muted)] focus:ring-2 focus:ring-[var(--accent)]/30 outline-none"
             />
-          </label>
+            <p className="mt-1 text-[11px] text-[var(--ink-muted)] text-right">{form.content.length}/5000</p>
+          </div>
 
-          {localError ? <p className="text-sm text-rose-500">{localError}</p> : null}
+          {composerError && (
+            <div role="alert" className="rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-900/20 p-3">
+              <p className="text-sm text-rose-600 dark:text-rose-400">{composerError}</p>
+            </div>
+          )}
 
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex gap-3 pt-1">
             <button
               type="button"
               onClick={resetComposer}
-              disabled={isSubmitting}
-              className="rounded-full border border-[var(--card-border)] px-5 py-2 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--card)]/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)] disabled:opacity-60"
+              disabled={isSaving}
+              className="flex-1 rounded-full border border-[var(--card-border)] px-4 py-2 text-sm font-semibold hover:bg-[var(--card)]/80 disabled:opacity-60"
             >
               Cancel
             </button>
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-br from-[#7EA7FF] to-[#FF8DC5] px-5 py-2 text-sm font-semibold uppercase tracking-[0.25em] text-white shadow-sm transition hover:brightness-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#7EA7FF] disabled:opacity-70"
+              disabled={isSaving || !form.content.trim()}
+              className="flex-1 rounded-full bg-[var(--accent)] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-110 disabled:opacity-60 active:scale-95"
             >
-              {isSubmitting ? (
+              {isSaving ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                  <Loader2 className="h-4 w-4 animate-spin inline-block mr-2" />
                   Saving…
                 </>
               ) : (
